@@ -265,19 +265,19 @@ class Summaries(gym.Wrapper):
     return self.env.reset(**kwargs)
 
 
-def nature_dqn_env(env_id, batch_size=None, seed=None,
+def nature_dqn_env(env_id, nenvs=None, seed=None,
                    summaries=True, clip_reward=True):
   """ Wraps env as in Nature DQN paper. """
   if "NoFrameskip" not in env_id:
     raise ValueError(f"env_id must have 'NoFrameskip' but is {env_id}")
-  if batch_size is not None:
+  if nenvs is not None:
     if seed is None:
-      seed = list(range(batch_size))
+      seed = list(range(nenvs))
     if isinstance(seed, int):
-      seed = [seed] * batch_size
-    if len(seed) != batch_size:
+      seed = [seed] * nenvs
+    if len(seed) != nenvs:
       raise ValueError(f"seed has length {len(seed)} but must have "
-                       f"length equal to batch_size which is {batch_size}")
+                       f"length equal to nenvs which is {nenvs}")
 
     env = ParallelEnvBatch([
         lambda i=i, env_seed=env_seed: nature_dqn_env(
