@@ -4,12 +4,8 @@ Implements Proximal Policy Optimization algorithm.
 import tensorflow as tf
 
 from .base import BaseAlgorithm
-
-
-def r_squared(targets, predictions):
-  """ Coefficient of determination. """
-  target_variance = tf.nn.moments(targets, tuple(range(targets.ndim)))[1]
-  return 1. - tf.reduce_mean(tf.square(targets - predictions)) / target_variance
+from .common import (
+    r_squared, reduce_add_summary, maybe_clip_by_global_norm_with_summary)
 
 
 class PPO(BaseAlgorithm):
@@ -64,8 +60,7 @@ class PPO(BaseAlgorithm):
 
     policy_loss = tf.reduce_mean(policy_loss)
     entropy = tf.reduce_mean(act["distribution"].entropy())
-    tf.contrib.summary.scalar("ppo/advantages", tf.reduce_mean(advantages),
-                              step=self.step_var)
+    reduce_add_summary("ppo/advantages", advantages, step=self.step_var)
     tf.contrib.summary.scalar("ppo/policy_loss", policy_loss,
                               step=self.step_var)
     tf.contrib.summary.scalar("ppo/entropy", entropy, step=self.step_var)
@@ -96,15 +91,10 @@ class PPO(BaseAlgorithm):
 
     value_loss = tf.reduce_mean(value_loss)
     tf.contrib.summary.scalar("ppo/value_loss", value_loss, step=self.step_var)
-    tf.contrib.summary.scalar("ppo/value_targets",
-                              tf.reduce_mean(value_targets),
+    reduce_add_summary("ppo/value_targets", value_targets, step=self.step_var)
+    reduce_add_summary("ppo/value_preds", values, step=self.step_var)
+    tf.contrib.summary.scalar("ppo/r_squared", r_squared(value_targets, values),
                               step=self.step_var)
-    tf.contrib.summary.scalar("ppo/value_preds", tf.reduce_mean(values),
-                              step=self.step_var)
-    tf.contrib.summary.scalar(
-        "ppo/r_squared",
-        r_squared(tf.convert_to_tensor(value_targets), values),
-        step=self.step_var)
     value_loss = tf.reduce_mean(value_loss)
     return value_loss
 
@@ -118,10 +108,5 @@ class PPO(BaseAlgorithm):
     return loss
 
   def preprocess_gradients(self, gradients):
-    if self.max_grad_norm is None:
-      grad_norm = tf.linalg.global_norm(gradients)
-    else:
-      gradients, grad_norm = tf.clip_by_global_norm(gradients,
-                                                    self.max_grad_norm)
-    tf.contrib.summary.scalar("ppo/grad_norm", grad_norm, step=self.step_var)
-    return gradients
+    return maybe_clip_by_global_norm_with_summary(
+        "ppo/grad_norm", gradients, self.max_grad_norm, step=self.step_var)

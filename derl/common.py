@@ -47,3 +47,33 @@ def clone_model(model, name=None):
   # pylint: disable=protected-access
   layers = [clone_layer(layer) for layer in model._layers]
   return tf.keras.Sequential(layers, name=name)
+
+
+def r_squared(targets, predictions):
+  """ Computes coefficient of determination. """
+  targets, predictions = map(tf.convert_to_tensor, (targets, predictions))
+  target_variance = tf.nn.moments(targets, tuple(range(targets.ndim)))[1]
+  return 1. - tf.reduce_mean(tf.square(targets - predictions)) / target_variance
+
+
+def reduce_add_summary(name, tensor, family=None, step=None,
+                       reduction=tf.reduce_mean):
+  """ Reduces tensor with given function and adds resulting scalar summary."""
+  reduced = reduction(tensor) if reduction else tensor
+  if reduced.ndim != 0:
+    raise ValueError("the result of applying reduction is not scalar and has "
+                     f"shape {reduced.shape}")
+  tf.contrib.summary.scalar(name, reduced, family=family, step=step)
+
+
+# pylint: disable=invalid-name
+def maybe_clip_by_global_norm_with_summary(summary_tag, tensors,
+                                           clip_norm=None,
+                                           step=None):
+  """ Clips by clip_norm if specified, always adds summary of true norm. """
+  if clip_norm is None:
+    grad_norm = tf.linalg.global_norm(tensors)
+  else:
+    tensors, grad_norm = tf.clip_by_global_norm(tensors, clip_norm)
+  tf.contrib.summary.scalar(summary_tag, grad_norm, step=step)
+  return tensors
