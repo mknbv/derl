@@ -18,3 +18,9 @@ from .models import (
 from .policies import Policy, ActorCriticPolicy
 from .ppo import PPO
 from .a2c import A2C
+from .parsers import (
+    simple_parser,
+    defaults_parser,
+    get_parser,
+    log_args
+)

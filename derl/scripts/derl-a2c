@@ -3,41 +3,39 @@
 Script to run Advantage Actor Critic training.
 """
 # pylint: disable=invalid-name
-import argparse
 import tensorflow as tf
 from tqdm import tqdm
 import derl
 tf.enable_eager_execution()
 
 
-def get_parser(base_parser=None):
-  """ Returns A2C argument parser. """
-  if base_parser is None:
-    base_parser = argparse.ArgumentParser()
-  base_parser.add_argument("--env-id", required=True)
-  base_parser.add_argument("--logdir", required=True)
-  base_parser.add_argument("--log-period", type=int, default=1)
-  base_parser.add_argument("--nenvs", type=int, default=8)
-  base_parser.add_argument("--num-train-steps", type=float, default=10e6)
-  base_parser.add_argument("--num-runner-steps", type=int, default=5)
-  base_parser.add_argument("--gamma", type=float, default=0.99)
-  base_parser.add_argument("--lambda_", type=float, default=0.95)
-  base_parser.add_argument("--lr", type=float, default=7e-4)
-  base_parser.add_argument("--optimizer-decay", type=float, default=0.99)
-  base_parser.add_argument("--optimizer-epsilon", type=float, default=1e-5)
-  base_parser.add_argument("--value-loss-coef", type=float, default=0.25)
-  base_parser.add_argument("--entropy-coef", type=float, default=0.01)
-  base_parser.add_argument("--max-grad-norm", type=float, default=0.5)
-  return base_parser
+def a2c_atari_defaults():
+  """ Returns default arguments for A2C training in Atari envs. """
+  return {
+      "nenvs": 8,
+      "num-train-steps": 10e6,
+      "num-runner-steps": 5,
+      "gamma": 0.99,
+      "lambda_": 1.,
+      "normalize": dict(action="store_true"),
+      "lr": 7e-4,
+      "optimizer-decay": 0.99,
+      "optimizer-epsilon": 1e-5,
+      "value-loss-coef": 0.5,
+      "entropy-coef": 0.01,
+      "max-grad-norm": 0.5,
+  }
 
 
 def main():
-  """ Runs a2c training. """
-  args = get_parser().parse_args()
+  """ Runs A2C training. """
+  args = derl.get_parser(a2c_atari_defaults()).parse_args()
   env = derl.env.nature_dqn_env(args.env_id, args.nenvs)
+
   policy = derl.ActorCriticPolicy(derl.NatureDQNModel([env.action_space.n, 1]))
   runner = derl.EnvRunner(env, policy, args.num_runner_steps,
                           transforms=[derl.GAE(policy, gamma=args.gamma,
+                                               normalize=args.normalize,
                                                lambda_=args.lambda_),
                                       derl.MergeTimeBatch()])
   lr = derl.train.linear_anneal("lr", args.lr, args.num_train_steps,
