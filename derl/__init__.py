@@ -22,5 +22,6 @@ from .parsers import (
     simple_parser,
     defaults_parser,
     get_parser,
-    log_args
+    log_args,
+    get_args
 )

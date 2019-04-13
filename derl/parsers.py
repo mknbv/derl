@@ -29,7 +29,7 @@ def defaults_parser(defaults, base_parser=None):
   return base_parser
 
 
-def get_parser(defaults, add_env_id=True, add_logdir=True, log_period=True):
+def get_parser(defaults, add_env_id=True, add_logdir=True, log_period=1):
   """ Returns parser for specified algorithm and env type. """
   return defaults_parser(
       defaults, simple_parser(add_env_id, add_logdir, log_period))
@@ -44,3 +44,14 @@ def log_args(args, logdir=None):
   with open(os.path.join(logdir, "args.txt"), 'w') as argsfile:
     for key, val in vars(args).items():
       argsfile.write(f"{key}: {val}\n")
+
+
+def get_args(defaults, env_id=True, logdir=True, log_period=1, log=None):
+  """ Returns parsed arguments. """
+  if log and not logdir:
+    raise ValueError("logdir must be True when log is True")
+  parser = get_parser(defaults, env_id, logdir, log_period)
+  args = parser.parse_args()
+  if log or log is None and logdir:
+    log_args(args)
+  return args
