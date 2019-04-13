@@ -1,4 +1,4 @@
-""" Environment wrappers. """
+""" Atari env wrappers. """
 from collections import deque
 
 import cv2
