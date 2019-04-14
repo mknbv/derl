@@ -29,7 +29,7 @@ def a2c_atari_defaults():
 
 def main():
   """ Runs A2C training. """
-  args = derl.get_args(a2c_atari_defaults())
+  args = derl.get_args(atari_defaults=a2c_atari_defaults())
   env = derl.env.nature_dqn_env(args.env_id, args.nenvs)
 
   policy = derl.ActorCriticPolicy(derl.NatureDQNModel([env.action_space.n, 1]))
