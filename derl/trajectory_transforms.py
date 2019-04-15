@@ -35,8 +35,8 @@ class GAE:
     if (not (0 <= values.ndim - rewards.ndim <= 1)
         or values.ndim == rewards.ndim + 1 and values.shape[-1] != 1):
       raise ValueError(
-          f"tarajectory['values'] of shape {trajectory['values'].shape} "
-          "must have the same number of dimensions as"
+          f"trajectory['values'] of shape {trajectory['values'].shape} "
+          "must have the same number of dimensions as "
           f"trajectory['rewards'] which has shape {rewards.shape} "
           "or have last dimension of size 1")
     if values.ndim == rewards.ndim + 1:
