@@ -37,8 +37,6 @@ class EnvBatch(Env):
     make_env_functions = self._get_make_env_functions(make_env, nenvs)
     self._envs = [make_env() for make_env in make_env_functions]
     self._nenvs = len(self.envs)
-    # self.observation_space = SpaceBatch([env.observation_space
-    #                                      for env in self._envs])
     self.action_space = SpaceBatch([env.action_space
                                     for env in self._envs])
 

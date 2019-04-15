@@ -1,7 +1,9 @@
 """ Keras models for reinforcement learning problems. """
 from math import sqrt
+import gym.spaces
 import tensorflow as tf
 from .common import clone_model
+from .env.env_batch import SpaceBatch
 
 
 def maybe_rescale(inputs, ubyte_rescale=None):
@@ -137,10 +139,13 @@ class MLPModel(tf.keras.Model):
 
 class MujocoModel(tf.keras.Model):
   """ Typical model trained in MuJoCo environments. """
-  def __init__(self, input_shape, nactions, *output_units):
+  def __init__(self, input_shape, output_units):
     super().__init__()
+    if isinstance(output_units, int):
+      output_units = [output_units]
+    nactions = output_units[0]
     self.logstd = tf.Variable(tf.zeros(nactions), trainable=True, name="logstd")
-    self.model = MLPModel(input_shape, (nactions, *output_units))
+    self.model = MLPModel(input_shape, output_units)
 
   @property
   def input(self):
@@ -149,4 +154,27 @@ class MujocoModel(tf.keras.Model):
   def call(self, inputs): # pylint: disable=arguments-differ
     inputs = tf.cast(inputs, tf.float32)
     logits, *outputs = self.model(inputs)
+    # std will be broadcasted automatically
     return (logits, tf.exp(self.logstd), *outputs)
+
+
+def make_model(observation_space, action_space, other_outputs=None):
+  """ Creates one of default models for a given action space. """
+  if isinstance(other_outputs, int) or other_outputs is None:
+    other_outputs = [other_outputs] if other_outputs is not None else []
+
+  if isinstance(action_space, SpaceBatch):
+    action_space = action_space.spaces[0]
+  if isinstance(action_space, gym.spaces.Discrete):
+    output_units = [action_space.n, *other_outputs]
+    return NatureDQNModel(input_shape=observation_space.shape,
+                          output_units=output_units)
+  if isinstance(action_space, gym.spaces.Box):
+    if len(action_space.shape) != 1:
+      raise ValueError("when action space is an instance of gym.spaces.Box "
+                       "it should have a single dimension, got "
+                       f"len(action_space.shape) = {len(action_space.shape)}")
+    output_units = [action_space.shape[0], *other_outputs]
+    return MujocoModel(input_shape=observation_space.shape,
+                       output_units=output_units)
+  raise ValueError(f"unsupported action space {action_space}")

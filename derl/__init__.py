@@ -13,7 +13,8 @@ from .models import (
     NatureDQNModel,
     MLPBase,
     MLPModel,
-    MujocoModel
+    MujocoModel,
+    make_model
 )
 from .policies import Policy, ActorCriticPolicy
 from .ppo import PPO
