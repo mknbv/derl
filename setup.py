@@ -12,9 +12,10 @@ setup(
         "derl/scripts/derl-a2c",
     ],
     install_requires=[
+        "gym[atari]>=0.11",
         "numpy",
         "opencv-python",
-        "gym[atari]>=0.11",
+        "tensorflow-probability",
         "tqdm",
     ],
     long_description="DERL is a Deep Reinforcement Learning package"

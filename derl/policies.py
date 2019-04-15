@@ -2,6 +2,7 @@
 from abc import ABC, abstractmethod
 
 import tensorflow as tf
+import tensorflow_probability as tfp
 
 
 class Policy(ABC):
@@ -29,7 +30,7 @@ class Policy(ABC):
 
 class ActorCriticPolicy(Policy):
   """ Actor critic policy with discrete number of actions. """
-  def __init__(self, model, distribution=tf.distributions.Categorical):
+  def __init__(self, model, distribution=None):
     self.model = model
     self.distribution = distribution
 
@@ -52,7 +53,19 @@ class ActorCriticPolicy(Policy):
                              for inputs in distribution_inputs]
       values = tf.squeeze(values, squeeze_dims)
 
-    distribution = self.distribution(*distribution_inputs)
+    if self.distribution is None:
+      if len(distribution_inputs) == 1:
+        distribution = tfp.distributions.Categorical(*distribution_inputs)
+      elif len(distribution_inputs) == 2:
+        distribution = tfp.distributions.MultivariateNormalDiag(
+            *distribution_inputs)
+      else:
+        raise ValueError(f"model has {len(distribution_inputs)} "
+                         "outputs to create a distribution, "
+                         "expected a single output for categorical "
+                         "and two outputs for normal distributions")
+    else:
+      distribution = self.distribution(*distribution_inputs)
     if training:
       return {"distribution": distribution, "values": values}
     actions = distribution.sample()
