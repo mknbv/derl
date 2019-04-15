@@ -48,24 +48,24 @@ def log_args(args, logdir=None):
 
 
 def get_args_with_defaults(defaults, env_id=True,
-                           logdir=True, log_period=1, log=None):
+                           logdir=True, log_period=1, call_log_args=None):
   """ Returns parsed arguments. """
-  if log and not logdir:
-    raise ValueError("logdir must be True when log is True")
+  if call_log_args and not logdir:
+    raise ValueError("logdir must be True when call_log_args is True")
   parser = get_parser(defaults, env_id, logdir, log_period)
   args = parser.parse_args()
-  if log or log is None and logdir:
+  if call_log_args or call_log_args is None and logdir:
     log_args(args)
   return args
 
 
 def get_args(atari_defaults=None, mujoco_defaults=None,
-             logdir=True, log_period=1, log=True):
+             logdir=True, log_period=1, call_log_args=True):
   """ Retunrs arguments from defaults chosen based on env_id. """
   if atari_defaults is None and mujoco_defaults is None:
     raise ValueError("atari_defaults and mujoco_defaults cannot both be None")
-  if log and not logdir:
-    raise ValueError("logdir must be True when log is True")
+  if call_log_args and not logdir:
+    raise ValueError("logdir must be True when call_log_args is True")
   env_type_defaults = dict(atari=atari_defaults, mujoco=mujoco_defaults)
   simple_parser = get_simple_parser(add_logdir=logdir, log_period=log_period)
   args, unknown_args = simple_parser.parse_known_args()
@@ -94,6 +94,6 @@ def get_args(atari_defaults=None, mujoco_defaults=None,
 
   alg_parser = get_parser(defaults, add_env_id=False, add_logdir=False)
   args = alg_parser.parse_args(unknown_args, args)
-  if log:
+  if call_log_args:
     log_args(args)
   return args
