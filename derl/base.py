@@ -13,7 +13,7 @@ class BaseRunner(ABC):
   def __init__(self, step_var=None):
     if step_var is None:
       step_var = StepVariable(f"{camel2snake(self.__class__.__name__)}_step",
-                              tf.train.get_or_create_global_step())
+                              tf.train.create_global_step())
     self.step_var = step_var
 
   @abstractmethod
