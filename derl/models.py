@@ -154,8 +154,9 @@ class MujocoModel(tf.keras.Model):
   def call(self, inputs): # pylint: disable=arguments-differ
     inputs = tf.cast(inputs, tf.float32)
     logits, *outputs = self.model(inputs)
-    # std will be broadcasted automatically
-    return (logits, tf.exp(self.logstd), *outputs)
+    std = tf.exp(self.logstd)
+    std = tf.tile(std[None], [inputs.shape[0].value, 1])
+    return (logits, std, *outputs)
 
 
 def make_model(observation_space, action_space, other_outputs=None):
