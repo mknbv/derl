@@ -10,6 +10,7 @@ setup(
     packages=["derl"],
     scripts=[
         "derl/scripts/derl-a2c",
+        "derl/scripts/derl-ppo",
     ],
     install_requires=[
         "gym[atari]>=0.11",
