@@ -7,27 +7,17 @@ from .trajectory_transforms import (
     GAE, MergeTimeBatch, NormalizeAdvantages)
 
 
-def nenvs(env):
-  """ Returns number of envs in env batch or None if single env. """
-  return getattr(env.unwrapped, "nenvs", None)
-
-
 class EnvRunner(BaseRunner):
   """ Reinforcement learning runner in an environment with given policy """
   def __init__(self, env, policy, nsteps,
                cutoff=None, transforms=None, step_var=None):
-    super().__init__(step_var)
+    super().__init__(env, policy, step_var)
     self.env = env
     self.policy = policy
     self.nsteps = nsteps
     self.cutoff = cutoff
     self.transforms = transforms or []
     self.state = {"latest_observation": self.env.reset()}
-
-  @property
-  def nenvs(self):
-    """ Returns number of batched envs or `None` if env is not batched """
-    return nenvs(self.env)
 
   def reset(self):
     """ Resets env and runner states. """
@@ -81,7 +71,7 @@ class TrajectorySampler(BaseRunner):
   # pylint: disable=too-many-instance-attributes
   def __init__(self, runner, num_epochs=4, num_minibatches=4,
                shuffle_before_epoch=True, transforms=None):
-    super().__init__(runner.step_var)
+    super().__init__(runner.env, runner.policy, runner.step_var)
     self.runner = runner
     self.num_epochs = num_epochs
     self.num_minibatches = num_minibatches
@@ -90,11 +80,6 @@ class TrajectorySampler(BaseRunner):
     self.minibatch_count = 0
     self.epoch_count = 0
     self.trajectory = None
-
-  @property
-  def nenvs(self):
-    """ Number of envs in batch or None for unbatched env. """
-    return self.runner.nenvs
 
   def trajectory_is_stale(self):
     """ True iff new trajectory should be generated for sub-sampling. """
@@ -138,7 +123,7 @@ def make_ppo_runner(env, policy, num_runner_steps, gamma=0.99, lambda_=0.95,
                     num_epochs=4, num_minibatches=4):
   """ Returns env runner for PPO """
   transforms = [GAE(policy, gamma=gamma, lambda_=lambda_, normalize=False)]
-  if not policy.is_recurrent() and nenvs(env):
+  if not policy.is_recurrent() and getattr(env.unwrapped, "nenvs", None):
     transforms.append(MergeTimeBatch())
   runner = EnvRunner(env, policy, num_runner_steps, transforms=transforms)
   runner = TrajectorySampler(runner, num_epochs=num_epochs,
