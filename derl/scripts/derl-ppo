@@ -1,77 +1,17 @@
 """ Script to run PPO training. """
 # pylint: disable=invalid-name
 import tensorflow as tf
-from tqdm import tqdm
 import derl
 tf.enable_eager_execution()
 
 
-def ppo_atari_defaults():
-  """ Returns default arguments for PPO training in Atari envs. """
-  return {
-      "num-train-steps": 10e6,
-      "nenvs": 8,
-      "num-runner-steps": 128,
-      "gamma": 0.99,
-      "lambda_": 0.95,
-      "num-epochs": 3,
-      "num-minibatches": 4,
-      "cliprange": 0.1,
-      "value-loss-coef": 0.25,
-      "entropy-coef": 0.01,
-      "max-grad-norm": 0.5,
-      "lr": 2.5e-4,
-      "optimizer-epsilon": 1e-5,
-  }
-
-
-def ppo_mujoco_defaults():
-  """ Returns default arguments for PPO training in MuJoCo envs. """
-  return {
-      "num-train-steps": 1e6,
-      "nenvs": dict(type=int, default=None),
-      "num-runner-steps": 2048,
-      "gamma": 0.99,
-      "lambda_": 0.95,
-      "num-epochs": 10,
-      "num-minibatches": 32,
-      "cliprange": 0.2,
-      "value-loss-coef": 0.25,
-      "entropy-coef": 0.,
-      "max-grad-norm": 0.5,
-      "lr": 3e-4,
-      "optimizer-epsilon": 1e-5,
-  }
-
-
 def main():
   """ Runs PPO training. """
-  args = derl.get_args(atari_defaults=ppo_atari_defaults(),
-                       mujoco_defaults=ppo_mujoco_defaults())
-
+  args = derl.get_args(atari_defaults=derl.PPOLearner.atari_defaults,
+                       mujoco_defaults=derl.PPOLearner.mujoco_defaults)
   env = derl.env.make(args.env_id, args.nenvs)
-  policy = derl.ActorCriticPolicy(
-      derl.make_model(env.observation_space, env.action_space, 1))
-  runner = derl.make_ppo_runner(env, policy, args.num_runner_steps,
-                                gamma=args.gamma, lambda_=args.lambda_,
-                                num_epochs=args.num_epochs,
-                                num_minibatches=args.num_minibatches)
-  lr = derl.train.linear_anneal("lr", args.lr, args.num_train_steps,
-                                step_var=runner.step_var)
-  optimizer = tf.train.AdamOptimizer(lr, epsilon=args.optimizer_epsilon)
-  ppo = derl.PPO(policy, optimizer,
-                 cliprange=args.cliprange,
-                 value_loss_coef=args.value_loss_coef,
-                 entropy_coef=args.entropy_coef,
-                 max_grad_norm=args.max_grad_norm)
-
-  summary_writer = tf.contrib.summary.create_file_writer(args.logdir)
-  summary_writer.set_as_default()
-  with tqdm(total=args.num_train_steps) as pbar,\
-      tf.contrib.summary.record_summaries_every_n_global_steps(args.log_period):
-    while int(runner.step_var) < args.num_train_steps:
-      pbar.update(int(runner.step_var) - pbar.n)
-      ppo.step(runner.get_next())
+  ppo = derl.PPOLearner.from_env_args(env, args)
+  ppo.learn(args.num_train_steps, args.logdir, args.log_period)
 
 
 if __name__ == "__main__":
