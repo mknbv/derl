@@ -20,10 +20,6 @@ class BaseRunner(ABC):
   def get_next(self):
     """ Returns next data object """
 
-  def __iter__(self):
-    while True:
-      yield self.get_next()
-
 
 def camel2snake(name):
   """ Converts camel case to snake case. """
@@ -59,18 +55,4 @@ class BaseAlgorithm(ABC):
                                        self.model.trainable_variables))
     if getattr(self.step_var, "auto_update", True):
       self.step_var.assign_add(1)
-    return loss
-
-
-class KerasAlgorithm(BaseAlgorithm):
-  """ Algorithm wrapper for tf.keras.Model. """
-  def __init__(self, model, optimizer=None,
-               name="keras_algorithm", step_var=None):
-    super().__init__(model, optimizer, step_var)
-    self.name = name
-
-  def loss(self, data):
-    loss = self.model.loss(data['y'], self.model(data['x']))
-    if self.name is not None:
-      tf.contrib.summary.scalar(f"{self.name}/loss", loss, step=self.step_var)
     return loss
