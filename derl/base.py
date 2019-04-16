@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 import re
 
 import tensorflow as tf
+from tqdm import tqdm
 from .train import StepVariable
 
 
@@ -63,3 +64,44 @@ class BaseAlgorithm(ABC):
     if getattr(self.step_var, "auto_update", True):
       self.step_var.assign_add(1)
     return loss
+
+
+class BaseLearner(ABC):
+  """ High-level class for performing learning. """
+  def __init__(self, runner, alg):
+    self.runner = runner
+    self.alg = alg
+
+  @staticmethod
+  @abstractmethod
+  def make_runner(env, args):
+    """ Creates a runner based on the argparse Namespace. """
+
+  @staticmethod
+  @abstractmethod
+  def make_alg(runner, args):
+    """ Creates learner algorithm. """
+
+  @classmethod
+  def from_env_args(cls, env, args):
+    """ Creates a learner instance from environment and argparse Namespace. """
+    runner = cls.make_runner(env, args)
+    return cls(runner, cls.make_alg(runner, args))
+
+  def learn(self, num_steps, logdir, log_period):
+    """ Performs learning for a specified number of steps. """
+    if not getattr(self.runner.step_var, "auto_update", True):
+      raise ValueError("learn method is not supported when runner.step_var "
+                       "does not auto-update")
+    summary_writer = tf.contrib.summary.create_file_writer(logdir)
+    summary_writer.set_as_default()
+    step = self.runner.step_var
+    if isinstance(step, StepVariable):
+      step = step.variable
+    with tqdm(total=num_steps) as pbar,\
+        tf.contrib.summary.record_summaries_every_n_global_steps(
+            log_period, global_step=step):
+      while int(self.runner.step_var) < num_steps:
+        pbar.update(int(self.runner.step_var) - pbar.n)
+        data = self.runner.get_next()
+        self.alg.step(data)
