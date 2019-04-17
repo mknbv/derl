@@ -17,6 +17,19 @@ def maybe_rescale(inputs, ubyte_rescale=None):
   return inputs
 
 
+class MaybeRescale(tf.keras.layers.Lambda):
+  """ Rescales inputs to [0, 1] if they are in uint8 and flag not False. """
+  def __init__(self, input_shape, ubyte_rescale=None):
+    super().__init__(
+        lambda inputs: maybe_rescale(inputs, ubyte_rescale),
+        input_shape=input_shape,
+        # Specifying output_shape is necessary to prevent redundant call
+        # that will determine the output shape by calling the function
+        # with tf.float32 type tensor
+        output_shape=input_shape
+    )
+
+
 class NatureDQNBase(tf.keras.models.Sequential):
   """ Hidden layers of the Nature DQN model. """
   def __init__(self,
@@ -25,14 +38,8 @@ class NatureDQNBase(tf.keras.models.Sequential):
                kernel_initializer=tf.initializers.orthogonal(sqrt(2)),
                bias_initializer=tf.initializers.zeros()):
     super().__init__([
-        tf.keras.layers.Lambda(
-            lambda inputs: maybe_rescale(inputs, ubyte_rescale),
-            input_shape=input_shape,
-            # Specifying output_shape is necessary to prevent redundant call
-            # that will determine the output shape by calling the function
-            # with tf.float32 type tensor
-            output_shape=input_shape
-        ),
+        MaybeRescale(input_shape=input_shape,
+                     ubyte_rescale=ubyte_rescale),
         tf.keras.layers.Conv2D(
             filters=32,
             kernel_size=8,
