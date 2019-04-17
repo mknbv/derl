@@ -58,7 +58,11 @@ class EnvRunner(BaseRunner):
 
     trajectory.update(observations=observations, rewards=rewards, resets=resets)
     for key, val in trajectory.items():
-      trajectory[key] = np.asarray(val)
+      try:
+        trajectory[key] = np.asarray(val)
+      except ValueError:
+        raise ValueError(
+            f"cannot convert value under key '{key}' to np.ndarray")
     trajectory["state"] = self.state
 
     for transform in self.transforms:
