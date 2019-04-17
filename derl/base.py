@@ -88,20 +88,21 @@ class BaseLearner(ABC):
     runner = cls.make_runner(env, args)
     return cls(runner, cls.make_alg(runner, args))
 
-  def learn(self, num_steps, logdir, log_period):
+  def learn(self, nsteps, logdir=None, log_period=1):
     """ Performs learning for a specified number of steps. """
     if not getattr(self.runner.step_var, "auto_update", True):
       raise ValueError("learn method is not supported when runner.step_var "
                        "does not auto-update")
-    summary_writer = tf.contrib.summary.create_file_writer(logdir)
-    summary_writer.set_as_default()
+    if logdir is not None:
+      summary_writer = tf.contrib.summary.create_file_writer(logdir)
+      summary_writer.set_as_default()
     step = self.runner.step_var
     if isinstance(step, StepVariable):
       step = step.variable
-    with tqdm(total=num_steps) as pbar,\
+    with tqdm(total=nsteps) as pbar,\
         tf.contrib.summary.record_summaries_every_n_global_steps(
             log_period, global_step=step):
-      while int(self.runner.step_var) < num_steps:
+      while int(self.runner.step_var) < nsteps:
         pbar.update(int(self.runner.step_var) - pbar.n)
         data = self.runner.get_next()
         self.alg.step(data)
