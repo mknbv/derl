@@ -9,6 +9,7 @@ from .trajectory_transforms import (
     Take,
 )
 from .models import (
+    MaybeRescale,
     NatureDQNBase,
     NatureDQNModel,
     MLPBase,

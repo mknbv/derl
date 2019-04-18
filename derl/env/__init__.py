@@ -16,6 +16,10 @@ from .atari_wrappers import (
     ClipReward,
     Summaries,
 )
+from .mujoco_wrappers import (
+    RunningMeanVar,
+    Normalize,
+)
 from .make_env import (
     is_atari_id,
     is_mujoco_id,
