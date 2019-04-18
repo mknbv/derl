@@ -45,6 +45,7 @@ def log_args(args, logdir=None):
   with open(os.path.join(logdir, "args.txt"), 'w') as argsfile:
     for key, val in vars(args).items():
       argsfile.write(f"{key}: {val}\n")
+  return args
 
 
 def get_args_with_defaults(defaults, env_id=True,
@@ -61,7 +62,7 @@ def get_args_with_defaults(defaults, env_id=True,
 
 def get_args(atari_defaults=None, mujoco_defaults=None,
              logdir=True, log_period=1, call_log_args=True):
-  """ Retunrs arguments from defaults chosen based on env_id. """
+  """ Returns arguments from defaults chosen based on env_id. """
   if atari_defaults is None and mujoco_defaults is None:
     raise ValueError("atari_defaults and mujoco_defaults cannot both be None")
   if call_log_args and not logdir:
