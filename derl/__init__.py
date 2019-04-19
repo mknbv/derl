@@ -11,7 +11,11 @@ from .trajectory_transforms import (
 from .models import (
     MaybeRescale,
     NatureDQNBase,
+    compute_outputs,
+    BaseOutputsModel,
     NatureDQNModel,
+    IMPALABase,
+    IMPALAModel,
     MLPBase,
     MLPModel,
     MujocoModel,

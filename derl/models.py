@@ -6,6 +6,24 @@ from .common import clone_model
 from .env.env_batch import SpaceBatch
 
 
+def compute_outputs(activations, units, layer_type=tf.keras.layers.Dense,
+                    **kwargs):
+  """ Applies layers to a given tensor of activations. """
+  if isinstance(units, (list, tuple)):
+    return [layer_type(units=n, **kwargs)(activations) for n in units]
+  return layer_type(units=units, **kwargs)(activations)
+
+
+class BaseOutputsModel(tf.keras.Model):
+  """ Adds output layers on top of the given base model. """
+  def __init__(self, base, output_units, layer_type=tf.keras.layers.Dense,
+               **kwargs):
+    inputs = tf.keras.layers.Input(base.input.shape[1:])
+    outputs = compute_outputs(base(inputs), output_units,
+                              layer_type=layer_type, **kwargs)
+    super().__init__(inputs=inputs, outputs=outputs)
+
+
 def maybe_rescale(inputs, ubyte_rescale=None):
   """ Rescales inputs to [0, 1] if they are in uint8 and flag not False. """
   if ubyte_rescale and inputs.dtype != tf.uint8.as_numpy_dtype:
@@ -73,7 +91,7 @@ class NatureDQNBase(tf.keras.models.Sequential):
     ])
 
 
-class NatureDQNModel(tf.keras.Model):
+class NatureDQNModel(BaseOutputsModel):
   """ Nature DQN model with possibly several outputs. """
   # pylint: disable=too-many-arguments
   def __init__(self,
@@ -82,24 +100,10 @@ class NatureDQNModel(tf.keras.Model):
                ubyte_rescale=None,
                kernel_initializer=tf.initializers.orthogonal(sqrt(2)),
                bias_initializer=tf.initializers.zeros()):
-    base = NatureDQNBase(input_shape, ubyte_rescale,
-                         kernel_initializer, bias_initializer)
-    inputs = tf.keras.layers.Input(input_shape)
-    base_outputs = base(inputs)
-    if isinstance(output_units, (list, tuple)):
-      outputs = [
-          tf.keras.layers.Dense(
-              units=units,
-              kernel_initializer=kernel_initializer,
-              bias_initializer=bias_initializer)(base_outputs)
-          for units in output_units
-      ]
-    else:
-      outputs = tf.keras.layers.Dense(
-          units=output_units,
-          kernel_initializer=kernel_initializer,
-          bias_initializer=bias_initializer)(base_outputs)
-    super().__init__(inputs=inputs, outputs=outputs)
+    init = {"kernel_initializer": kernel_initializer,
+            "bias_initializer": bias_initializer}
+    super().__init__(NatureDQNBase(input_shape, ubyte_rescale, **init),
+                     output_units, **init)
 
 
 class IMPALABase(tf.keras.Model):
@@ -138,7 +142,26 @@ class IMPALABase(tf.keras.Model):
     out = tf.keras.layers.ReLU()(out)
     out = tf.keras.layers.Flatten()(out)
     out = tf.keras.layers.Dense(units=256, activation=tf.nn.relu, **init)(out)
+
+    # Instead of the LSTM layer we add an additional dense layer.
+    out = tf.keras.layers.Dense(units=256, activation=tf.nn.relu, **init)(out)
     super().__init__(inputs=inputs, outputs=out)
+
+
+class IMPALAModel(BaseOutputsModel):
+  """ Non-recurrent version of the IMPALA model.
+
+  Model from the paper [Espeholt et al.](https://arxiv.org/abs/1802.01561).
+  """
+  def __init__(self, output_units,
+               input_shape=(84, 84, 4),
+               ubyte_rescale=True,
+               kernel_initializer=tf.initializers.orthogonal(sqrt(2)),
+               bias_initializer=tf.initializers.zeros()):
+    init = {"kernel_initializer": kernel_initializer,
+            "bias_initializer": bias_initializer}
+    super().__init__(IMPALABase(input_shape, ubyte_rescale, **init),
+                     output_units, **init)
 
 
 class MLPBase(tf.keras.Sequential):
