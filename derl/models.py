@@ -206,7 +206,7 @@ class MujocoModel(tf.keras.Model):
 
 
 def make_model(observation_space, action_space, other_outputs=None):
-  """ Creates one of default models for a given action space. """
+  """ Creates default model for given observation and action spaces. """
   if isinstance(other_outputs, int) or other_outputs is None:
     other_outputs = [other_outputs] if other_outputs is not None else []
 
