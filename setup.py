@@ -16,7 +16,7 @@ setup(
         "gym[atari]>=0.11",
         "numpy",
         "opencv-python",
-        "tensorflow-probability",
+        "tensorflow-probability==0.5",
         "tqdm",
     ],
     long_description="DERL is a Deep Reinforcement Learning package"
