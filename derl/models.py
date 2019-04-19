@@ -102,6 +102,45 @@ class NatureDQNModel(tf.keras.Model):
     super().__init__(inputs=inputs, outputs=outputs)
 
 
+class IMPALABase(tf.keras.Model):
+  """ Hidden layers of IMPALA model.
+
+  See [Espeholt et al.](https://arxiv.org/abs/1802.01561).
+  """
+  def __init__(self, input_shape=(84, 84, 4),
+               ubyte_rescale=None,
+               kernel_initializer=tf.initializers.orthogonal(sqrt(2)),
+               bias_initializer=tf.initializers.zeros()):
+    init = {"kernel_initializer": kernel_initializer,
+            "bias_initializer": bias_initializer}
+
+    def simple_block(filters, inputs, pool):
+      out = tf.keras.layers.Conv2D(filters, kernel_size=3,
+                                   padding="same", **init)(inputs)
+      if pool:
+        out = tf.keras.layers.MaxPool2D(pool_size=3, strides=2,
+                                        padding="same")(out)
+      return out
+
+    inputs = tf.keras.layers.Input(input_shape)
+    out = MaybeRescale(input_shape, ubyte_rescale)(inputs)
+    for filters, nblocks in [(16, 2), (32, 2), (32, 2)]:
+      out = simple_block(filters, out, True)
+
+      for _ in range(nblocks):
+        block_input = out
+        out = tf.keras.layers.ReLU()(out)
+        out = simple_block(filters, out, False)
+        out = tf.keras.layers.ReLU()(out)
+        out = simple_block(filters, out, False)
+        out = tf.keras.layers.add([block_input, out])
+
+    out = tf.keras.layers.ReLU()(out)
+    out = tf.keras.layers.Flatten()(out)
+    out = tf.keras.layers.Dense(units=256, activation=tf.nn.relu, **init)(out)
+    super().__init__(inputs=inputs, outputs=out)
+
+
 class MLPBase(tf.keras.Sequential):
   """ MLP model that could be used in classic control or mujoco envs. """
   def __init__(self,
