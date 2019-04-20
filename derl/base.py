@@ -74,7 +74,7 @@ class BaseLearner(ABC):
 
   @staticmethod
   @abstractmethod
-  def make_runner(env, args):
+  def make_runner(env, args, model=None):
     """ Creates a runner based on the argparse Namespace. """
 
   @staticmethod
@@ -83,9 +83,9 @@ class BaseLearner(ABC):
     """ Creates learner algorithm. """
 
   @classmethod
-  def from_env_args(cls, env, args):
-    """ Creates a learner instance from environment and argparse Namespace. """
-    runner = cls.make_runner(env, args)
+  def from_env_args(cls, env, args, model=None):
+    """ Creates a learner instance from environment and args namespace. """
+    runner = cls.make_runner(env, args, model=model)
     return cls(runner, cls.make_alg(runner, args))
 
   def learn(self, nsteps, logdir=None, log_period=1):

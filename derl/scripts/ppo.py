@@ -44,9 +44,10 @@ class PPOLearner(BaseLearner):
   }
 
   @staticmethod
-  def make_runner(env, args):
-    policy = ActorCriticPolicy(
-        make_model(env.observation_space, env.action_space, 1))
+  def make_runner(env, args, model=None):
+    model = (model if model is not None
+             else make_model(env.observation_space, env.action_space, 1))
+    policy = ActorCriticPolicy(model)
     runner = make_ppo_runner(env, policy, args.num_runner_steps,
                              gamma=args.gamma, lambda_=args.lambda_,
                              num_epochs=args.num_epochs,
