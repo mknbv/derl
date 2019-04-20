@@ -48,7 +48,7 @@ def log_args(args, logdir=None):
   return args
 
 
-def get_args_with_defaults(defaults, env_id=True,
+def get_args_from_defaults(defaults, env_id=True,
                            logdir=True, log_period=1, call_log_args=None):
   """ Returns parsed arguments. """
   if call_log_args and not logdir:

@@ -5,6 +5,6 @@ from .parsers import (
     get_defaults_parser,
     get_parser,
     log_args,
-    get_args_with_defaults,
+    get_args_from_defaults,
     get_args,
 )
