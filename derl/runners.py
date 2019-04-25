@@ -9,13 +9,15 @@ from .trajectory_transforms import (
 
 class EnvRunner(BaseRunner):
   """ Reinforcement learning runner in an environment with given policy """
-  def __init__(self, env, policy, nsteps,
-               cutoff=None, transforms=None, step_var=None):
+  # pylint: disable=too-many-arguments
+  def __init__(self, env, policy, nsteps, cutoff=None,
+               asarray=True, transforms=None, step_var=None):
     super().__init__(env, policy, step_var)
     self.env = env
     self.policy = policy
     self.nsteps = nsteps
     self.cutoff = cutoff
+    self.asarray = asarray
     self.transforms = transforms or []
     self.state = {"latest_observation": self.env.reset()}
 
@@ -57,12 +59,13 @@ class EnvRunner(BaseRunner):
           break
 
     trajectory.update(observations=observations, rewards=rewards, resets=resets)
-    for key, val in trajectory.items():
-      try:
-        trajectory[key] = np.asarray(val)
-      except ValueError:
-        raise ValueError(
-            f"cannot convert value under key '{key}' to np.ndarray")
+    if self.asarray:
+      for key, val in trajectory.items():
+        try:
+          trajectory[key] = np.asarray(val)
+        except ValueError:
+          raise ValueError(
+              f"cannot convert value under key '{key}' to np.ndarray")
     trajectory["state"] = self.state
 
     for transform in self.transforms:
