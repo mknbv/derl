@@ -1,5 +1,6 @@
 """ Creates environments with standard wrappers. """
 import gym
+from atari_py import list_games
 from .atari_wrappers import (
     Summaries,
     EpisodicLife,
@@ -15,38 +16,45 @@ from .env_batch import ParallelEnvBatch
 from .mujoco_wrappers import Normalize
 
 
+def list_envs(env_type):
+  """ Returns list of envs ids of given type. """
+  ids = {
+      "atari": list("".join(c.capitalize() for c in g.split("_"))
+                    for g in list_games()),
+      "mujoco": [
+          "Reacher",
+          "Pusher",
+          "Thrower",
+          "Striker",
+          "InvertedPendulum",
+          "InvertedDoublePendulum",
+          "HalfCheetah",
+          "Hopper",
+          "Swimmer",
+          "Walker",
+          "Ant",
+          "Humanoid",
+          "HumanoidStandup",
+      ]
+  }
+  return ids[env_type]
+
+
 def is_atari_id(env_id):
   """ Returns True if env_id corresponds to an Atari env. """
-  env_id = "".join(env_id.split("-")[:-1])
+  env_id = env_id[:env_id.rfind("-")]
   for postfix in ("Deterministic", "NoFrameskip"):
     if env_id.endswith(postfix):
       env_id = env_id[:-len(postfix)]
 
-  # TODO: rewrite without atari_py dependency.
-  from atari_py import list_games
-  games = set("".join(c.capitalize() for c in g.split("_"))
-              for g in list_games())
-  return env_id in games
+  atari_envs = set(list_envs("atari"))
+  return env_id in atari_envs
 
 
 def is_mujoco_id(env_id):
   """ Returns True if env_id corresponds to MuJoCo env. """
-  mujoco_ids = {
-      "Reacher",
-      "Pusher",
-      "Thrower",
-      "Striker",
-      "InvertedPendulum",
-      "InvertedDoublePendulum",
-      "HalfCheetah",
-      "Hopper",
-      "Swimmer",
-      "Walker",
-      "Ant",
-      "Humanoid",
-      "HumanoidStandup",
-  }
   env_id = "".join(env_id.split("-")[:-1])
+  mujoco_ids = set(list_envs("mujoco"))
   return env_id in mujoco_ids
 
 

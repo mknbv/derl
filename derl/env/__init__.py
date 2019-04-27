@@ -21,6 +21,7 @@ from .mujoco_wrappers import (
     Normalize,
 )
 from .make_env import (
+    list_envs,
     is_atari_id,
     is_mujoco_id,
     nature_dqn_env,
