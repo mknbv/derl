@@ -14,7 +14,6 @@ from .atari_wrappers import (
     QueueFrames,
     SkipFrames,
     ClipReward,
-    Summaries,
 )
 from .mujoco_wrappers import (
     RunningMeanVar,
@@ -28,3 +27,4 @@ from .make_env import (
     mujoco_env,
     make,
 )
+from .summaries import Summaries

@@ -2,7 +2,6 @@
 import gym
 from atari_py import list_games
 from .atari_wrappers import (
-    Summaries,
     EpisodicLife,
     FireReset,
     StartWithRandomActions,
@@ -14,6 +13,7 @@ from .atari_wrappers import (
 )
 from .env_batch import ParallelEnvBatch
 from .mujoco_wrappers import Normalize
+from .summaries import Summaries
 
 
 def list_envs(env_type):
