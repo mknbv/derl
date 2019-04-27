@@ -7,8 +7,6 @@ import gym.spaces as spaces
 from gym.envs import atari
 import numpy as np
 import tensorflow as tf
-
-from .env_batch import ParallelEnvBatch
 cv2.ocl.setUseOpenCL(False)
 
 
@@ -263,45 +261,3 @@ class Summaries(gym.Wrapper):
     self.episode_lengths.fill(0)
     self.had_ended_episodes.fill(False)
     return self.env.reset(**kwargs)
-
-
-def nature_dqn_env(env_id, nenvs=None, seed=None,
-                   summaries=True, clip_reward=True):
-  """ Wraps env as in Nature DQN paper. """
-  if "NoFrameskip" not in env_id:
-    raise ValueError(f"env_id must have 'NoFrameskip' but is {env_id}")
-  if nenvs is not None:
-    if seed is None:
-      seed = list(range(nenvs))
-    if isinstance(seed, int):
-      seed = [seed] * nenvs
-    if len(seed) != nenvs:
-      raise ValueError(f"seed has length {len(seed)} but must have "
-                       f"length equal to nenvs which is {nenvs}")
-
-    env = ParallelEnvBatch([
-        lambda i=i, env_seed=env_seed: nature_dqn_env(
-            env_id, seed=env_seed, summaries=False, clip_reward=False)
-        for i, env_seed in enumerate(seed)
-    ])
-    if summaries:
-      env = Summaries(env, prefix=env_id)
-    if clip_reward:
-      env = ClipReward(env)
-    return env
-
-  env = gym.make(env_id)
-  env.seed(seed)
-  if summaries:
-    env = Summaries(env)
-  env = EpisodicLife(env)
-  if "FIRE" in env.unwrapped.get_action_meanings():
-    env = FireReset(env)
-  env = StartWithRandomActions(env, max_random_actions=30)
-  env = MaxBetweenFrames(env)
-  env = SkipFrames(env, 4)
-  env = ImagePreprocessing(env, width=84, height=84, grayscale=True)
-  env = QueueFrames(env, 4)
-  if clip_reward:
-    env = ClipReward(env)
-  return env
