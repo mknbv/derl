@@ -31,7 +31,7 @@ def list_envs(env_type):
           "HalfCheetah",
           "Hopper",
           "Swimmer",
-          "Walker",
+          "Walker2d",
           "Ant",
           "Humanoid",
           "HumanoidStandup",
