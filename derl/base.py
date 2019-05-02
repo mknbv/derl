@@ -2,6 +2,7 @@
 Defines base classes.
 """
 from abc import ABC, abstractmethod
+import os
 import re
 
 import tensorflow as tf
@@ -93,11 +94,16 @@ class BaseLearner(ABC):
     runner = cls.make_runner(env, args, model=model)
     return cls(runner, cls.make_alg(runner, args))
 
-  def learn(self, nsteps, logdir=None, log_period=1):
+  def learn(self, nsteps, logdir=None, log_period=1, save_weights=None):
     """ Performs learning for a specified number of steps. """
     if not getattr(self.runner.step_var, "auto_update", True):
       raise ValueError("learn method is not supported when runner.step_var "
                        "does not auto-update")
+    if save_weights and logdir is None:
+      raise ValueError("logdir cannot be None when save_weights is True")
+    if save_weights is None:
+      save_weights = logdir is not None
+
     if logdir is not None:
       summary_writer = tf.contrib.summary.create_file_writer(logdir)
       summary_writer.set_as_default()
@@ -111,3 +117,5 @@ class BaseLearner(ABC):
         pbar.update(int(self.runner.step_var) - pbar.n)
         data = self.runner.get_next()
         self.alg.step(data)
+    if save_weights:
+      self.model.save_weights(os.path.join(logdir, "model"))
