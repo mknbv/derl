@@ -1,4 +1,4 @@
-""" Code common for all rl package. """
+""" Code common for the whole package. """
 import tensorflow as tf
 
 

@@ -3,8 +3,8 @@ Implements Proximal Policy Optimization algorithm.
 """
 import tensorflow as tf
 
-from .base import BaseAlgorithm
-from .common import (
+from derl.base import BaseAlgorithm
+from derl.common import (
     r_squared, reduce_add_summary, maybe_clip_by_global_norm_with_summary)
 
 
