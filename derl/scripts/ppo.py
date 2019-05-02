@@ -1,6 +1,6 @@
 """ Implements PPO Learner. """
 import tensorflow as tf
-from derl.base import BaseLearner
+from derl.base import Learner
 from derl.models import make_model
 from derl.policies import ActorCriticPolicy
 from derl.alg.ppo import PPO
@@ -8,7 +8,7 @@ from derl.runners import make_ppo_runner
 from derl.train import linear_anneal
 
 
-class PPOLearner(BaseLearner):
+class PPOLearner(Learner):
   """ Proximal Policy Optimization learner. """
 
   atari_defaults = {

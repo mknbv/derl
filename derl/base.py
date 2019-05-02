@@ -67,21 +67,21 @@ class BaseAlgorithm(ABC):
     return loss
 
 
-class BaseLearner(ABC):
+class Learner:
   """ High-level class for performing learning. """
   def __init__(self, runner, alg):
     self.runner = runner
     self.alg = alg
 
   @staticmethod
-  @abstractmethod
   def make_runner(env, args, model=None):
     """ Creates a runner based on the argparse Namespace. """
+    raise NotImplementedError("Learner does not implement make_runner method")
 
   @staticmethod
-  @abstractmethod
   def make_alg(runner, args):
     """ Creates learner algorithm. """
+    raise NotImplementedError("Learner does not implement make_alg method")
 
   @property
   def model(self):
