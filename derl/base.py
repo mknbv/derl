@@ -82,6 +82,11 @@ class BaseLearner(ABC):
   def make_alg(runner, args):
     """ Creates learner algorithm. """
 
+  @property
+  def model(self):
+    """ Model trained by the algorithm. """
+    return self.alg.model
+
   @classmethod
   def from_env_args(cls, env, args, model=None):
     """ Creates a learner instance from environment and args namespace. """
