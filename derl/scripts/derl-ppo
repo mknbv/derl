@@ -7,8 +7,8 @@ tf.enable_eager_execution()
 
 def main():
   """ Runs PPO training. """
-  args = derl.get_args(atari_defaults=derl.PPOLearner.atari_defaults,
-                       mujoco_defaults=derl.PPOLearner.mujoco_defaults)
+  args = derl.get_args(atari_defaults=derl.PPOLearner.get_defaults("atari"),
+                       mujoco_defaults=derl.PPOLearner.get_defaults("mujoco"))
   env = derl.env.make(args.env_id, args.nenvs)
   ppo = derl.PPOLearner.from_env_args(env, args)
   ppo.learn(args.num_train_steps, args.logdir, args.log_period)

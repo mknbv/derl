@@ -74,6 +74,11 @@ class Learner:
     self.alg = alg
 
   @staticmethod
+  def get_defaults(env_type="atari"):
+    """ Returns default hyperparameters for specified env type. """
+    return {}[env_type]
+
+  @staticmethod
   def make_runner(env, args, model=None):
     """ Creates a runner based on the argparse Namespace. """
     raise NotImplementedError("Learner does not implement make_runner method")

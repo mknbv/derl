@@ -11,37 +11,41 @@ from derl.train import linear_anneal
 class PPOLearner(Learner):
   """ Proximal Policy Optimization learner. """
 
-  atari_defaults = {
-      "num-train-steps": 10e6,
-      "nenvs": 8,
-      "num-runner-steps": 128,
-      "gamma": 0.99,
-      "lambda_": 0.95,
-      "num-epochs": 3,
-      "num-minibatches": 4,
-      "cliprange": 0.1,
-      "value-loss-coef": 0.25,
-      "entropy-coef": 0.01,
-      "max-grad-norm": 0.5,
-      "lr": 2.5e-4,
-      "optimizer-epsilon": 1e-5,
-  }
-
-  mujoco_defaults = {
-      "num-train-steps": 1e6,
-      "nenvs": dict(type=int, default=None),
-      "num-runner-steps": 2048,
-      "gamma": 0.99,
-      "lambda_": 0.95,
-      "num-epochs": 10,
-      "num-minibatches": 32,
-      "cliprange": 0.2,
-      "value-loss-coef": 0.25,
-      "entropy-coef": 0.,
-      "max-grad-norm": 0.5,
-      "lr": 3e-4,
-      "optimizer-epsilon": 1e-5,
-  }
+  @staticmethod
+  def get_defaults(env_type="atari"):
+    defaults = {
+        "atari": {
+            "num-train-steps": 10e6,
+            "nenvs": 8,
+            "num-runner-steps": 128,
+            "gamma": 0.99,
+            "lambda_": 0.95,
+            "num-epochs": 3,
+            "num-minibatches": 4,
+            "cliprange": 0.1,
+            "value-loss-coef": 0.25,
+            "entropy-coef": 0.01,
+            "max-grad-norm": 0.5,
+            "lr": 2.5e-4,
+            "optimizer-epsilon": 1e-5,
+        },
+        "mujoco": {
+            "num-train-steps": 1e6,
+            "nenvs": dict(type=int, default=None),
+            "num-runner-steps": 2048,
+            "gamma": 0.99,
+            "lambda_": 0.95,
+            "num-epochs": 10,
+            "num-minibatches": 32,
+            "cliprange": 0.2,
+            "value-loss-coef": 0.25,
+            "entropy-coef": 0.,
+            "max-grad-norm": 0.5,
+            "lr": 3e-4,
+            "optimizer-epsilon": 1e-5,
+        }
+    }
+    return defaults[env_type]
 
   @staticmethod
   def make_runner(env, args, model=None):
