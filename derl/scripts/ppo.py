@@ -69,3 +69,12 @@ class PPOLearner(Learner):
               cliprange=args.cliprange,
               max_grad_norm=args.max_grad_norm)
     return ppo
+
+  def learning_body(self):
+    data = self.runner.get_next()
+    loss = self.alg.step(data)
+    yield data, loss
+    while not self.runner.trajectory_is_stale():
+      data = self.runner.get_next()
+      loss = self.alg.step(data)
+      yield data, loss
