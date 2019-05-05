@@ -65,12 +65,16 @@ def get_seed(nenvs=None, seed=None):
                      f"got type {type(seed)}")
   if nenvs is None:
     return seed or 0
-  if seed is not None and len(seed) != nenvs:
-    raise ValueError(f"seed must have length {nenvs} but has {len(seed)}")
+  if isinstance(seed, (list, tuple)):
+    if len(seed) != nenvs:
+      raise ValueError(f"seed must have length {nenvs} but has {len(seed)}")
+    return seed
   if seed is None:
     seed = list(range(nenvs))
   elif isinstance(seed, int):
     seed = [seed] * nenvs
+  else:
+    raise ValueError(f"invalid seed: {seed}")
   return seed
 
 
@@ -134,17 +138,18 @@ def mujoco_env(env_id, nenvs=None, seed=None, summaries=True, normalize=True):
 
 
 def make(env_id, nenvs=None, seed=None):
-  """ Creates an atari or mujoco env with standard wrappers. """
+  """ Creates env with standard wrappers. """
   if is_atari_id(env_id):
     return nature_dqn_env(env_id, nenvs, seed=seed)
   if is_mujoco_id(env_id):
     return mujoco_env(env_id, nenvs, seed=seed)
-  if nenvs is None:
-    return gym.make(env_id)
 
   def _make(seed):
     env = gym.make(env_id)
     env.seed(seed)
     return env
+
   seed = get_seed(nenvs, seed)
+  if nenvs is None:
+    return _make(seed)
   return ParallelEnvBatch([lambda s=s: _make(s) for s in seed])
