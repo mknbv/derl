@@ -59,6 +59,7 @@ def linear_anneal(name, start_value, nsteps, step_var, end_value=0.):
   var = tf.Variable(start_value, trainable=False, name=name)
   step_var.add_annealing_variable(
       var,
-      lambda var, step: end_value + start_value * (
-          1. - tf.to_float(step) / tf.to_float(nsteps)))
+      lambda var, step: start_value + (end_value - start_value) * (
+          tf.cast(step, tf.float32) / tf.cast(nsteps, tf.float32))
+  )
   return var
