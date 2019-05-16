@@ -136,8 +136,8 @@ class MaxBetweenFrames(gym.ObservationWrapper):
 
 
 class QueueFrames(gym.ObservationWrapper):
-  """ Queues specified number of frames together along new dimension. """
-  def __init__(self, env, nframes, concat=False):
+  """ Queues specified number of frames together. """
+  def __init__(self, env, nframes=4, concat=False):
     super(QueueFrames, self).__init__(env)
     self.obs_queue = deque([], maxlen=nframes)
     self.concat = concat
@@ -152,7 +152,7 @@ class QueueFrames(gym.ObservationWrapper):
   def observation(self, observation):
     self.obs_queue.append(observation)
     return (np.concatenate(self.obs_queue, -1) if self.concat
-            else np.dstack(self.obs_queue))
+            else np.stack(self.obs_queue, -1))
 
   def reset(self, **kwargs):
     obs = self.env.reset()
