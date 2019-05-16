@@ -27,4 +27,7 @@ from .make_env import (
     mujoco_env,
     make,
 )
-from .summaries import Summaries
+from .summarize import (
+    RewardSummarizer,
+    Summarize
+)

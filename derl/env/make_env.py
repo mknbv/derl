@@ -13,7 +13,7 @@ from .atari_wrappers import (
 )
 from .env_batch import ParallelEnvBatch
 from .mujoco_wrappers import Normalize
-from .summaries import Summaries
+from .summarize import Summarize
 
 
 def list_envs(env_type):
@@ -79,7 +79,7 @@ def get_seed(nenvs=None, seed=None):
 
 
 def nature_dqn_env(env_id, nenvs=None, seed=None,
-                   summaries=True, clip_reward=True):
+                   summarize=True, clip_reward=True):
   """ Wraps env as in Nature DQN paper. """
   assert is_atari_id(env_id)
   if "NoFrameskip" not in env_id:
@@ -88,19 +88,19 @@ def nature_dqn_env(env_id, nenvs=None, seed=None,
   if nenvs is not None:
     env = ParallelEnvBatch([
         lambda i=i, s=s: nature_dqn_env(
-            env_id, seed=s, summaries=False, clip_reward=False)
+            env_id, seed=s, summarize=False, clip_reward=False)
         for i, s in enumerate(seed)
     ])
-    if summaries:
-      env = Summaries(env, prefix=env_id)
+    if summarize:
+      env = Summarize.reward_summarizer(env, prefix=env_id)
     if clip_reward:
       env = ClipReward(env)
     return env
 
   env = gym.make(env_id)
   env.seed(seed)
-  if summaries:
-    env = Summaries(env)
+  if summarize:
+    env = Summarize.reward_summarizer(env)
   env = EpisodicLife(env)
   if "FIRE" in env.unwrapped.get_action_meanings():
     env = FireReset(env)
@@ -114,24 +114,24 @@ def nature_dqn_env(env_id, nenvs=None, seed=None,
   return env
 
 
-def mujoco_env(env_id, nenvs=None, seed=None, summaries=True, normalize=True):
+def mujoco_env(env_id, nenvs=None, seed=None, summarize=True, normalize=True):
   """ Creates and wraps MuJoCo env. """
   assert is_mujoco_id(env_id)
   seed = get_seed(nenvs, seed)
   if nenvs is not None:
     env = ParallelEnvBatch([
-        lambda s=s: mujoco_env(env_id, seed=s, summaries=False, normalize=False)
+        lambda s=s: mujoco_env(env_id, seed=s, summarize=False, normalize=False)
         for s in seed])
-    if summaries:
-      env = Summaries(env)
+    if summarize:
+      env = Summarize.reward_summarizer(env, prefix=env_id)
     if normalize:
       env = Normalize(env)
     return env
 
   env = gym.make(env_id)
   env.seed(seed)
-  if summaries:
-    env = Summaries(env)
+  if summarize:
+    env = Summarize.reward_summarizer(env)
   if normalize:
     env = Normalize(env)
   return env
