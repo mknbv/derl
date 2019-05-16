@@ -81,7 +81,7 @@ class StartWithRandomActions(gym.Wrapper):
     return obs, rew, done, info
 
   def reset(self, **kwargs):
-    obs = self.env.reset()
+    obs = self.env.reset(**kwargs)
     if self.real_done:
       num_random_actions = np.random.randint(self.max_random_actions + 1)
       for _ in range(num_random_actions):
@@ -131,7 +131,7 @@ class MaxBetweenFrames(gym.ObservationWrapper):
     return obs
 
   def reset(self, **kwargs):
-    self.last_obs = self.env.reset()
+    self.last_obs = self.env.reset(**kwargs)
     return self.last_obs
 
 
@@ -155,7 +155,7 @@ class QueueFrames(gym.ObservationWrapper):
             else np.stack(self.obs_queue, -1))
 
   def reset(self, **kwargs):
-    obs = self.env.reset()
+    obs = self.env.reset(**kwargs)
     for _ in range(self.obs_queue.maxlen - 1):
       self.obs_queue.append(obs)
     return self.observation(obs)
