@@ -2,7 +2,7 @@
 from collections import defaultdict
 import numpy as np
 
-from .base import BaseRunner
+from derl.base import BaseRunner
 from .trajectory_transforms import (
     GAE, MergeTimeBatch, NormalizeAdvantages)
 
