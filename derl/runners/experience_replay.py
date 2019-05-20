@@ -1,5 +1,7 @@
 """ Implements experience replay. """
 import numpy as np
+from derl.base import BaseRunner
+from .online import EnvRunner
 
 
 class InteractionStorage:
@@ -12,6 +14,18 @@ class InteractionStorage:
     self.rewards = np.empty(self.size, dtype=np.float32)
     self.index = 0
     self.is_full = self.index >= self.size
+
+  @classmethod
+  def from_env(cls, env, size, init_size=50_000):
+    """ Creates storage and initializes it with random interactions. """
+    storage = cls(size)
+    obs = env.reset()
+    for _ in range(init_size):
+      action = env.action_space.sample()
+      next_obs, rew, done, _ = env.step(action)
+      storage.add(obs, action, rew, done)
+      obs = next_obs if not done else env.reset()
+    return storage
 
   def add(self, observation, action, reward, done):
     """ Adds new interaction to the storage. """
@@ -55,3 +69,29 @@ class InteractionStorage:
     next_indices = (indices + 1) % self.size
     next_obs = np.array(list(self.observations[next_indices]))
     return obs, actions, rewards, resets, next_obs
+
+
+class ExperienceReplayRunner(BaseRunner):
+  """ Saves interactions to experience replay every nsteps steps. """
+  def __init__(self, runner, storage, batch_size):
+    super().__init__(runner.env, runner.policy, runner.step_var)
+    self.runner = runner
+    self.storage = storage
+    self.batch_size = batch_size
+
+  def get_next(self):
+    trajectory = self.runner.get_next()
+    interactions = [trajectory[k] for k in ("observations", "actions",
+                                            "rewards", "resets")]
+    self.storage.add_batch(*interactions)
+    return dict(zip(
+        ("observations", "actions", "rewards", "resets", "next_observations"),
+        self.storage.sample(self.batch_size)))
+
+
+def make_dqn_runner(env, policy, storage_size,
+                    steps_per_sample=4, batch_size=32, init_size=50_000):
+  """ Creates experience replay runner as used typically used with DQN alg. """
+  runner = EnvRunner(env, policy, nsteps=steps_per_sample)
+  storage = InteractionStorage.from_env(env, storage_size, init_size)
+  return ExperienceReplayRunner(runner, storage, batch_size)

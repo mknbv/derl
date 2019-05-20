@@ -3,6 +3,8 @@ from . import train, env
 from .base import BaseRunner, BaseAlgorithm, Learner
 from .runners.experience_replay import (
     InteractionStorage,
+    ExperienceReplayRunner,
+    make_dqn_runner,
 )
 from .runners.online import (
     EnvRunner,
