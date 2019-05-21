@@ -6,6 +6,7 @@ setup(
     description="Deep Reinforcement Learning package",
     author="Mikhail Konobeev",
     author_email="konobeev.michael@gmail.com",
+    url="https://github.com/MichaelKonobeev/derl/",
     license="MIT",
     packages=["derl"],
     scripts=[
