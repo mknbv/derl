@@ -33,6 +33,7 @@ from .models import (
 from .policies import Policy, ActorCriticPolicy
 from .alg import (
     A2C,
+    DQN,
     ActorCriticImitation,
     PPO,
 )
