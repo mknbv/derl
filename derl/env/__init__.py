@@ -15,7 +15,7 @@ from .atari_wrappers import (
     SkipFrames,
     ClipReward,
 )
-from .mujoco_wrappers import (
+from .normalize import (
     RunningMeanVar,
     Normalize,
 )

@@ -12,7 +12,7 @@ from .atari_wrappers import (
     ClipReward,
 )
 from .env_batch import ParallelEnvBatch
-from .mujoco_wrappers import Normalize
+from .normalize import Normalize
 from .summarize import Summarize
 
 
