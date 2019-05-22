@@ -33,6 +33,10 @@ class RunningMeanVar:
     self.mean, self.var, self.count = update_mean_var_count_from_moments(
         self.mean, self.var, self.count, batch_mean, batch_var, batch_count)
 
+  def save(self, filename):
+    """ Saves statistics to a file. """
+    np.savez(filename, mean=self.mean, var=self.var, count=self.count)
+
 
 def update_mean_var_count_from_moments(mean, var, count,
                                        batch_mean, batch_var, batch_count):
@@ -67,6 +71,15 @@ class Normalize(gym.Wrapper):
     self.ret = np.zeros(getattr(self.env.unwrapped, "nenvs", 1))
     self.gamma = gamma
     self.eps = eps
+
+  def save_wrapper(self, filename):
+    """ Saves normalization stats to files. """
+    if filename.endswith("npz"):
+      filename = filename[:-3]
+    if self.obs_rmv is not None:
+      self.obs_rmv.save(f"{filename}-obs-rmv")
+    if self.ret_rmv is not None:
+      self.ret_rmv.save(f"{filename}-ret-rmv")
 
   def observation(self, obs):
     """ Preprocesses a given observation. """
