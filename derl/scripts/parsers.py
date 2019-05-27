@@ -31,7 +31,7 @@ def get_defaults_parser(defaults, base_parser=None):
 
 
 def get_parser(defaults, add_env_id=True, add_logdir=True, log_period=1):
-  """ Returns parser for specified algorithm and env type. """
+  """ Returns parser for specified defaults and env type. """
   return get_defaults_parser(
       defaults, get_simple_parser(add_env_id, add_logdir, log_period))
 
