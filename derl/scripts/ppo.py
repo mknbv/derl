@@ -53,8 +53,8 @@ class PPOLearner(Learner):
              else make_model(env.observation_space, env.action_space, 1))
     policy = ActorCriticPolicy(model)
     kwargs = vars(args)
-    runner_kwargs = {key.replace("-", "_"): kwargs[key] for key in
-                     ["gamma", "lambda_", "num-epochs", "num-minibatches"]
+    runner_kwargs = {key: kwargs[key] for key in
+                     ["gamma", "lambda_", "num_epochs", "num_minibatches"]
                      if key in kwargs}
     runner = make_ppo_runner(env, policy, args.num_runner_steps,
                              **runner_kwargs)
@@ -70,9 +70,9 @@ class PPOLearner(Learner):
       optimizer = tf.train.AdamOptimizer(lr)
 
     kwargs = vars(args)
-    ppo_kwargs = {key.replace("-", "_"): kwargs[key]
-                  for key in ["value-loss-coef", "entropy-coef",
-                              "cliprange", "max-grad-norm"]
+    ppo_kwargs = {key: kwargs[key]
+                  for key in ["value_loss_coef", "entropy_coef",
+                              "cliprange", "max_grad_norm"]
                   if key in kwargs}
     ppo = PPO(runner.policy, optimizer, **ppo_kwargs)
     return ppo
