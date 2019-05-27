@@ -1,6 +1,5 @@
 """ MuJoCo env wrappers. """
 # Adapted from https://github.com/openai/baselines
-import os
 import gym
 import numpy as np
 
