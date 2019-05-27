@@ -133,14 +133,17 @@ def mujoco_env(env_id, nenvs=None, seed=None, summarize=True,
         lambda s=s: mujoco_env(env_id, seed=s, summarize=False,
                                normalize_obs=False, normalize_ret=False)
         for s in seed])
-    if summarize:
-      env = Summarize.reward_summarizer(env, prefix=env_id)
-    if normalize_obs or normalize_ret:
-      env = Normalize(env, obs=normalize_obs, ret=normalize_ret)
-    return env
+    return mujoco_wrap(env, summarize=summarize, normalize_obs=normalize_obs,
+                       normalize_ret=normalize_ret)
 
   env = gym.make(env_id)
   env.seed(seed)
+  return mujoco_wrap(env, summarize=summarize, normalize_obs=normalize_obs,
+                     normalize_ret=normalize_ret)
+
+
+def mujoco_wrap(env, summarize=True, normalize_obs=True, normalize_ret=True):
+  """ Wraps given env as a mujoco env. """
   if summarize:
     env = Summarize.reward_summarizer(env)
   if normalize_obs or normalize_ret:

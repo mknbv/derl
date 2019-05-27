@@ -26,6 +26,7 @@ from .make_env import (
     nature_dqn_env,
     nature_dqn_wrap,
     mujoco_env,
+    mujoco_wrap,
     make,
 )
 from .summarize import (
