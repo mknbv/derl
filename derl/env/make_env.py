@@ -137,15 +137,15 @@ def mujoco_env(env_id, nenvs=None, seed=None, summarize=True, normalize=True):
   return env
 
 
-def make(env_id, nenvs=None, seed=None):
+def make(env_id, nenvs=None, seed=None, **kwargs):
   """ Creates env with standard wrappers. """
   if is_atari_id(env_id):
-    return nature_dqn_env(env_id, nenvs, seed=seed)
+    return nature_dqn_env(env_id, nenvs, seed=seed, **kwargs)
   if is_mujoco_id(env_id):
-    return mujoco_env(env_id, nenvs, seed=seed)
+    return mujoco_env(env_id, nenvs, seed=seed, **kwargs)
 
   def _make(seed):
-    env = gym.make(env_id)
+    env = gym.make(env_id, **kwargs)
     env.seed(seed)
     return env
 
