@@ -79,7 +79,8 @@ def get_seed(nenvs=None, seed=None):
 
 
 def nature_dqn_env(env_id, nenvs=None, seed=None,
-                   summarize=True, clip_reward=True):
+                   episodic_life=True, summarize=True,
+                   clip_reward=True):
   """ Wraps env as in Nature DQN paper. """
   assert is_atari_id(env_id)
   if "NoFrameskip" not in env_id:
@@ -88,7 +89,8 @@ def nature_dqn_env(env_id, nenvs=None, seed=None,
   if nenvs is not None:
     env = ParallelEnvBatch([
         lambda i=i, s=s: nature_dqn_env(
-            env_id, seed=s, summarize=False, clip_reward=False)
+            env_id, seed=s, episodic_life=episodic_life,
+            summarize=False, clip_reward=False)
         for i, s in enumerate(seed)
     ])
     if summarize:
@@ -101,7 +103,8 @@ def nature_dqn_env(env_id, nenvs=None, seed=None,
   env.seed(seed)
   if summarize:
     env = Summarize.reward_summarizer(env)
-  env = EpisodicLife(env)
+  if episodic_life:
+    env = EpisodicLife(env)
   if "FIRE" in env.unwrapped.get_action_meanings():
     env = FireReset(env)
   env = StartWithRandomActions(env, max_random_actions=30)
