@@ -222,7 +222,12 @@ class MujocoModel(tf.keras.Model):
 
   def call(self, inputs): # pylint: disable=arguments-differ
     inputs = tf.cast(inputs, tf.float32)
-    logits, *outputs = self.model(inputs)
+    model_outputs = self.model(inputs)
+    if not isinstance(model_outputs, tf.Tensor):
+      logits, *outputs = model_outputs
+    else:
+      logits, outputs = model_outputs, []
+
     std = tf.exp(self.logstd)
     std = tf.tile(std[None], [inputs.shape[0].value, 1])
     return (logits, std, *outputs)
