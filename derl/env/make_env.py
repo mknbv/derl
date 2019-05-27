@@ -114,26 +114,28 @@ def nature_dqn_env(env_id, nenvs=None, seed=None,
   return env
 
 
-def mujoco_env(env_id, nenvs=None, seed=None, summarize=True, normalize=True):
+def mujoco_env(env_id, nenvs=None, seed=None, summarize=True,
+               normalize_obs=True, normalize_ret=True):
   """ Creates and wraps MuJoCo env. """
   assert is_mujoco_id(env_id)
   seed = get_seed(nenvs, seed)
   if nenvs is not None:
     env = ParallelEnvBatch([
-        lambda s=s: mujoco_env(env_id, seed=s, summarize=False, normalize=False)
+        lambda s=s: mujoco_env(env_id, seed=s, summarize=False,
+                               normalize_obs=False, normalize_ret=False)
         for s in seed])
     if summarize:
       env = Summarize.reward_summarizer(env, prefix=env_id)
-    if normalize:
-      env = Normalize(env)
+    if normalize_obs or normalize_ret:
+      env = Normalize(env, obs=normalize_obs, ret=normalize_ret)
     return env
 
   env = gym.make(env_id)
   env.seed(seed)
   if summarize:
     env = Summarize.reward_summarizer(env)
-  if normalize:
-    env = Normalize(env)
+  if normalize_obs or normalize_ret:
+    env = Normalize(env, obs=normalize_obs, ret=normalize_ret)
   return env
 
 
