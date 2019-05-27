@@ -79,8 +79,7 @@ def get_seed(nenvs=None, seed=None):
 
 
 def nature_dqn_env(env_id, nenvs=None, seed=None,
-                   episodic_life=True, summarize=True,
-                   clip_reward=True):
+                   summarize=True, episodic_life=True, clip_reward=True):
   """ Wraps env as in Nature DQN paper. """
   assert is_atari_id(env_id)
   if "NoFrameskip" not in env_id:
@@ -89,8 +88,8 @@ def nature_dqn_env(env_id, nenvs=None, seed=None,
   if nenvs is not None:
     env = ParallelEnvBatch([
         lambda i=i, s=s: nature_dqn_env(
-            env_id, seed=s, episodic_life=episodic_life,
-            summarize=False, clip_reward=False)
+            env_id, seed=s, summarize=False,
+            episodic_life=episodic_life, clip_reward=False)
         for i, s in enumerate(seed)
     ])
     if summarize:
@@ -101,6 +100,13 @@ def nature_dqn_env(env_id, nenvs=None, seed=None,
 
   env = gym.make(env_id)
   env.seed(seed)
+  return nature_dqn_wrap(env, summarize=summarize,
+                         episodic_life=episodic_life,
+                         clip_reward=clip_reward)
+
+
+def nature_dqn_wrap(env, summarize=True, episodic_life=True, clip_reward=True):
+  """ Wraps given env as in nature DQN paper. """
   if summarize:
     env = Summarize.reward_summarizer(env)
   if episodic_life:

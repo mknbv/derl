@@ -24,6 +24,7 @@ from .make_env import (
     is_atari_id,
     is_mujoco_id,
     nature_dqn_env,
+    nature_dqn_wrap,
     mujoco_env,
     make,
 )
