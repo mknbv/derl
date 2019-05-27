@@ -1,5 +1,6 @@
 """ MuJoCo env wrappers. """
 # Adapted from https://github.com/openai/baselines
+import os
 import gym
 import numpy as np
 
@@ -36,6 +37,12 @@ class RunningMeanVar:
   def save(self, filename):
     """ Saves statistics to a file. """
     np.savez(filename, mean=self.mean, var=self.var, count=self.count)
+
+  def restore(self, filename):
+    """ Restores statistics from a file. """
+    npfile = np.load(filename)
+    self.mean, self.var, self.count = (
+        npfile[key] for key in ["mean", "var", "count"])
 
 
 def update_mean_var_count_from_moments(mean, var, count,
@@ -80,6 +87,13 @@ class Normalize(gym.Wrapper):
       self.obs_rmv.save(f"{filename}-obs-rmv")
     if self.ret_rmv is not None:
       self.ret_rmv.save(f"{filename}-ret-rmv")
+
+  def restore_wrapper(self, filename):
+    """ Restores normalization statistics from a file. """
+    if self.obs_rmv is not None:
+      self.obs_rmv.restore(f"{filename}-obs-rmv.npz")
+    if self.ret_rmv is not None:
+      self.ret_rmv.restore(f"{filename}-ret-rmv.npz")
 
   def observation(self, obs):
     """ Preprocesses a given observation. """
