@@ -1,6 +1,7 @@
 """ Reinforcement learning policies. """
 from abc import ABC, abstractmethod
 
+import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
 
@@ -28,6 +29,20 @@ class Policy(ABC):
     necessary to recompute outputs for training.
     """
 
+
+def _call_model(model, inputs):
+  """ Calls model possibly with input broadcasting. """
+  expand_dims = model.input.shape.ndims - inputs.ndim
+  inputs = inputs[(None,) * expand_dims]
+  outputs = model(inputs)
+  squeeze_dims = tuple(range(expand_dims))
+  if squeeze_dims:
+    if isinstance(outputs, (list, tuple)):
+      return type(outputs)(map(lambda t: tf.squeeze(t, squeeze_dims), outputs))
+    return tf.squeeze(outputs, squeeze_dims)
+  return outputs
+
+
 class ActorCriticPolicy(Policy):
   """ Actor critic policy with discrete number of actions. """
   def __init__(self, model, distribution=None):
@@ -44,15 +59,7 @@ class ActorCriticPolicy(Policy):
     else:
       observations = inputs
 
-    expand_dims = self.model.input.shape.ndims - observations.ndim
-    observations = observations[(None,) * expand_dims]
-    *distribution_inputs, values = self.model(observations)
-    squeeze_dims = tuple(range(expand_dims))
-    if squeeze_dims:
-      distribution_inputs = [tf.squeeze(inputs, squeeze_dims)
-                             for inputs in distribution_inputs]
-      values = tf.squeeze(values, squeeze_dims)
-
+    *distribution_inputs, values = _call_model(self.model, observations)
     if self.distribution is None:
       if len(distribution_inputs) == 1:
         distribution = tfp.distributions.Categorical(*distribution_inputs)
@@ -73,3 +80,23 @@ class ActorCriticPolicy(Policy):
     return {"actions": actions.numpy(),
             "log_prob": log_prob.numpy(),
             "values": values.numpy()}
+
+
+class EpsilonGreedyPolicy(Policy):
+  """ Epsilon greedy policy. """
+  def __init__(self, model, epsilon=0.05):
+    self.model = model
+    self.epsilon = epsilon
+
+  def act(self, inputs, state=None, update_state=True, training=False):
+    if state is not None:
+      raise ValueError("epsilon greedy policy does not support state inputs")
+
+    epsilon = self.epsilon
+    if isinstance(epsilon, (tf.Tensor, tf.Variable)):
+      epsilon = epsilon.numpy()
+    if np.random.random() <= epsilon:
+      return {"actions": np.random.randint(self.model.output.shape[1].value)}
+
+    actions = np.argmax(_call_model(self.model, inputs).numpy(), -1)
+    return {"actions": actions}

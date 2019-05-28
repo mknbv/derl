@@ -30,7 +30,7 @@ from .models import (
     MujocoModel,
     make_model
 )
-from .policies import Policy, ActorCriticPolicy
+from .policies import Policy, ActorCriticPolicy, EpsilonGreedyPolicy
 from .alg import (
     A2C,
     DQN,
