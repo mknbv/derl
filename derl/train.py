@@ -34,7 +34,7 @@ class StepVariable:
     """ Updates the step variable by incrementing it by delta. """
     newstep = self.variable.assign_add(delta)
     for var, fun in self.anneals:
-      var.assign(fun(var, self.variable))
+      var.assign(fun())
       tf.contrib.summary.scalar(f"train/{var.name[:var.name.rfind(':')]}",
                                 var, step=self)
     return newstep
@@ -59,7 +59,6 @@ def linear_anneal(name, start_value, nsteps, step_var, end_value=0.):
   var = tf.Variable(start_value, trainable=False, name=name)
   step_var.add_annealing_variable(
       var,
-      lambda var, step: start_value + (end_value - start_value) * (
-          tf.cast(step, tf.float32) / tf.cast(nsteps, tf.float32))
-  )
+      tf.train.polynomial_decay(start_value, step_var.variable,
+                                nsteps, end_value))
   return var
