@@ -89,9 +89,9 @@ class ExperienceReplayRunner(BaseRunner):
         self.storage.sample(self.batch_size)))
 
 
-def make_dqn_runner(env, policy, storage_size,
-                    steps_per_sample=4, batch_size=32, init_size=50_000):
+def make_dqn_runner(env, policy, storage_size, steps_per_sample=4,
+                    batch_size=32, init_size=50_000, step_var=None):
   """ Creates experience replay runner as used typically used with DQN alg. """
-  runner = EnvRunner(env, policy, nsteps=steps_per_sample)
+  runner = EnvRunner(env, policy, nsteps=steps_per_sample, step_var=step_var)
   storage = InteractionStorage.from_env(env, storage_size, init_size)
   return ExperienceReplayRunner(runner, storage, batch_size)
