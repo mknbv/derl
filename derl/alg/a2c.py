@@ -1,8 +1,7 @@
 """ Implements Actor-Critic algorithm. """
 import tensorflow as tf
 from derl.base import BaseAlgorithm
-from derl.common import (
-    r_squared, reduce_add_summary, maybe_clip_by_global_norm_with_summary)
+from derl.common import r_squared, reduce_add_summary
 
 
 class A2C(BaseAlgorithm):
@@ -70,7 +69,3 @@ class A2C(BaseAlgorithm):
     loss = policy_loss + self.value_loss_coef * value_loss
     tf.contrib.summary.scalar("a2c/loss", loss, step=self.step_var)
     return loss
-
-  def preprocess_gradients(self, gradients):
-    return maybe_clip_by_global_norm_with_summary(
-        "a2c/grad_norm", gradients, self.max_grad_norm, step=self.step_var)
