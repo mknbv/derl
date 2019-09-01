@@ -1,6 +1,7 @@
 """ All derl imports. """
 from . import train, env
-from .base import BaseRunner, BaseAlgorithm, Learner
+from .base import BaseRunner, BaseAlgorithm
+from .learners import *
 from .runners.experience_replay import (
     InteractionStorage,
     ExperienceReplayRunner,
@@ -44,7 +45,4 @@ from .scripts import (
     log_args,
     get_args_from_defaults,
     get_args,
-)
-from .scripts import (
-    PPOLearner,
 )

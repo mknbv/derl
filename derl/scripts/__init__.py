@@ -1,5 +1,4 @@
 """ DERL scripts imports. """
-from .ppo import PPOLearner
 from .parsers import (
     get_simple_parser,
     get_defaults_parser,

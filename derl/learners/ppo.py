@@ -1,6 +1,6 @@
 """ Implements PPO Learner. """
 import tensorflow as tf
-from derl.base import Learner
+from derl.learners.learner import Learner
 from derl.models import make_model
 from derl.policies import ActorCriticPolicy
 from derl.alg.ppo import PPO
