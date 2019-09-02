@@ -9,10 +9,7 @@ setup(
     url="https://github.com/MichaelKonobeev/derl/",
     license="MIT",
     packages=["derl"],
-    scripts=[
-        "derl/scripts/derl-a2c",
-        "derl/scripts/derl-ppo",
-    ],
+    scripts=["derl/scripts/derl"],
     install_requires=[
         "gym[atari]>=0.11",
         "numpy",
