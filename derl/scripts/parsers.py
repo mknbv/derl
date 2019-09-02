@@ -60,7 +60,7 @@ def get_args_from_defaults(defaults, env_id=True,
   return args
 
 
-def get_args(atari_defaults=None, mujoco_defaults=None,
+def get_args(atari_defaults=None, mujoco_defaults=None, args=None,
              logdir=True, log_period=1, call_log_args=True):
   """ Returns arguments from defaults chosen based on env_id. """
   if atari_defaults is None and mujoco_defaults is None:
@@ -69,32 +69,33 @@ def get_args(atari_defaults=None, mujoco_defaults=None,
     raise ValueError("logdir must be True when call_log_args is True")
   env_type_defaults = dict(atari=atari_defaults, mujoco=mujoco_defaults)
   simple_parser = get_simple_parser(add_logdir=logdir, log_period=log_period)
-  args, unknown_args = simple_parser.parse_known_args()
+  namespace, unknown_args = simple_parser.parse_known_args(args)
 
-  if is_atari_id(args.env_id):
+  if is_atari_id(namespace.env_id):
     env_type = "atari"
-  elif is_mujoco_id(args.env_id):
+  elif is_mujoco_id(namespace.env_id):
     env_type = "mujoco"
   else:
     defaults_parser = argparse.ArgumentParser()
-    choices = set(k for k, v in env_type_defaults.items() if v is not None)
+    choices = set(k for k, v in env_type_defaults.items())
     defaults_parser.add_argument("--defaults", choices=choices)
-    args, unknown_args = defaults_parser.parse_known_args(unknown_args, args)
-    if args.defaults is None:
+    namespace, unknown_args = defaults_parser.parse_known_args(
+        unknown_args, namespace)
+    if namespace.defaults is None:
       defaults_parser.error(
-          f"{args.env_id} is neither an atari nor mujoco env, "
+          f"{namespace.env_id} is neither an atari nor mujoco env, "
           "please specify which defaults to choose by using "
           f"--defaults {choices}")
-    env_type = args.defaults
+    env_type = namespace.defaults
 
   defaults = env_type_defaults[env_type]
   if defaults is None:
-    raise ValueError(f"cannot run env {args.env_id} because "
+    raise ValueError(f"cannot run env {namespace.env_id} because "
                      "{0} defaults are not specified; does this algorithm "
                      "support {0} envs?".format(env_type))
 
   alg_parser = get_parser(defaults, add_env_id=False, add_logdir=False)
-  args = alg_parser.parse_args(unknown_args, args)
+  namespace = alg_parser.parse_args(unknown_args, namespace)
   if call_log_args:
-    log_args(args)
-  return args
+    log_args(namespace)
+  return namespace
