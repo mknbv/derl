@@ -10,13 +10,17 @@ class DQN(BaseAlgorithm):
   See [Mnih et al.](
   https://web.stanford.edu/class/psych209/Readings/MnihEtAlHassibis15NatureControlDeepRL.pdf).
   """
+  # pylint: disable=too-many-arguments
   def __init__(self, model, target_model,
-               optimizer=None, gamma=0.99,
+               optimizer=None,
+               gamma=0.99,
                target_update_period=40_000,
+               double=True,
                step_var=None):
     super().__init__(model, optimizer, step_var)
     self.target_model = target_model
     self.gamma = gamma
+    self.double = double
     self.target_update_period = target_update_period
     self.last_target_update_step = tf.Variable(
         int(self.step_var) - target_update_period,
@@ -32,11 +36,28 @@ class DQN(BaseAlgorithm):
     self.target_model.set_weights(self.model.get_weights())
     self.last_target_update_step.assign(self.step_var.variable)
 
+  def compute_qvalues(self, observations, actions=None):
+    """ Computes qvalues for given observations.
+
+    If actions are specified uses training model, otherwise target model.
+    If actions are not given uses argmax over training model or
+    target model (depending on self.double flag) to compute them.
+    """
+    if actions is None:
+      qvalues = self.target_model(observations)
+      actions = tf.cast(tf.argmax(qvalues if not self.double
+                                  else self.model(observations), -1), tf.int32)
+    else:
+      qvalues = self.model(observations)
+    indices = tf.stack([tf.range(tf.shape(actions)[0]), actions], -1)
+    qvalues = tf.gather_nd(qvalues, indices)
+    return qvalues
+
   def loss(self, data):
     obs, actions, rewards, resets, next_obs = (data[k] for k in (
         "observations", "actions", "rewards", "resets", "next_observations"))
-    next_qvalues = tf.reduce_max(
-        tf.stop_gradient(self.target_model(next_obs)), -1)
+    next_qvalues = self.compute_qvalues(next_obs)
+
     if len({rewards.shape, resets.shape}) != 1:
       raise ValueError(
           "rewards, resets must have the same shapes, "
@@ -47,9 +68,7 @@ class DQN(BaseAlgorithm):
                        f"{resets.shape}")
 
     qtargets = rewards + (1 - resets) * self.gamma * next_qvalues
-    qvalues = self.model(obs)
-    indices = tf.stack([tf.range(tf.shape(qvalues)[0]), actions], -1)
-    qvalues = tf.gather_nd(qvalues, indices)
+    qvalues = self.compute_qvalues(obs, actions)
     tf.contrib.summary.scalar("dqn/r_squared", r_squared(qtargets, qvalues),
                               step=self.step_var)
     loss = tf.losses.huber_loss(qtargets, qvalues)
