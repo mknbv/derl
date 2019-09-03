@@ -7,6 +7,7 @@ import re
 
 import tensorflow as tf
 from tqdm import tqdm
+from derl.common import maybe_clip_by_global_norm_with_summary
 from .train import StepVariable
 
 
@@ -51,7 +52,10 @@ class BaseAlgorithm(ABC):
 
   def preprocess_gradients(self, gradients):
     """ Applies gradient preprocessing. """
-    # pylint: disable=no-self-use
+    if hasattr(self, "max_grad_norm"):
+      gradients = maybe_clip_by_global_norm_with_summary(
+          f"{self.__class__.__name__.lower()}/grad_norm",
+          gradients, getattr(self, "max_grad_norm"), self.step_var)
     return gradients
 
   def step(self, data):
