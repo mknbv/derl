@@ -22,6 +22,7 @@ class DQNLearner(Learner):
             "storage-init-size": int(50e3),
             "steps-per-sample": 4,
             "batch-size": 32,
+            "nstep": 3,
             "lr": 2.5e-4,
             "optimizer-decay": 0.95,
             "optimizer-momentum": 0.,
@@ -49,7 +50,8 @@ class DQNLearner(Learner):
         args.exploration_end_step, step_var, args.exploration_epsilon_end)
     policy = EpsilonGreedyPolicy(model, epsilon)
     kwargs = vars(args)
-    runner_kwargs = {k: kwargs[k] for k in ("steps_per_sample", "batch_size")
+    runner_kwargs = {k: kwargs[k] for k in ("steps_per_sample", "batch_size",
+                                            "nstep")
                      if k in kwargs}
     runner_kwargs["init_size"] = kwargs["storage_init_size"]
     runner = make_dqn_runner(env, policy, storage_size=args.storage_size,
