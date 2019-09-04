@@ -28,6 +28,7 @@ class DQNLearner(Learner):
             "optimizer-epsilon": 0.01,
             "gamma": .99,
             "target-update-period": int(40e3),
+            "no-double": dict(action="store_false", dest="double"),
         },
     }.get(env_type)
 
@@ -71,6 +72,6 @@ class DQNLearner(Learner):
     }
     optimizer = tf.train.RMSPropOptimizer(args.lr, **optimizer_kwargs)
     dqn_kwargs = {k: kwargs[k] for k in
-                  ("gamma", "target_update_period") if k in kwargs}
+                  ("gamma", "target_update_period", "double") if k in kwargs}
     alg = DQN(model, target_model, optimizer, **dqn_kwargs)
     return alg
