@@ -54,30 +54,32 @@ class InteractionStorage:
     self.is_full = self.is_full or self.index + batch_size >= self.size
     self.index = (self.index + batch_size) % self.size
 
-  def sample(self, size):
+  def sample(self, size, nstep=3):
     """ Returns random sample of interactions of specified size. """
-    indices = np.random.randint(self.index - 1 if not self.is_full
-                                else self.size - 1, size=size)
-    nosample_index = (self.index + self.size - 1) % self.size
+    indices = np.random.randint(self.index - nstep if not self.is_full
+                                else self.size - nstep, size=size)
+    nosample_index = (self.index + self.size - nstep) % self.size
     inc_mask = indices >= nosample_index
-    indices[inc_mask] = (indices[inc_mask] + 1) % self.size
+    indices[inc_mask] = (indices[inc_mask] + nstep) % self.size
 
     obs = np.array(list(self.observations[indices]))
     actions = np.array(list(self.actions[indices]))
-    rewards = self.rewards[indices]
-    resets = self.resets[indices]
-    next_indices = (indices + 1) % self.size
+    nstep_indices = (indices[:, None] + np.arange(nstep)[None]) % self.size
+    rewards = self.rewards[nstep_indices]
+    resets = self.resets[nstep_indices]
+    next_indices = (indices + nstep) % self.size
     next_obs = np.array(list(self.observations[next_indices]))
     return obs, actions, rewards, resets, next_obs
 
 
 class ExperienceReplayRunner(BaseRunner):
   """ Saves interactions to experience replay every nsteps steps. """
-  def __init__(self, runner, storage, batch_size):
+  def __init__(self, runner, storage, batch_size, nstep=3):
     super().__init__(runner.env, runner.policy, runner.step_var)
     self.runner = runner
     self.storage = storage
     self.batch_size = batch_size
+    self.nstep = nstep
 
   def get_next(self):
     trajectory = self.runner.get_next()
@@ -86,12 +88,17 @@ class ExperienceReplayRunner(BaseRunner):
     self.storage.add_batch(*interactions)
     return dict(zip(
         ("observations", "actions", "rewards", "resets", "next_observations"),
-        self.storage.sample(self.batch_size)))
+        self.storage.sample(self.batch_size, self.nstep)))
 
 
-def make_dqn_runner(env, policy, storage_size, steps_per_sample=4,
-                    batch_size=32, init_size=50_000, step_var=None):
+# pylint: disable=too-many-arguments
+def make_dqn_runner(env, policy, storage_size,
+                    steps_per_sample=4,
+                    batch_size=32,
+                    nstep=3,
+                    init_size=50_000,
+                    step_var=None):
   """ Creates experience replay runner as used typically used with DQN alg. """
   runner = EnvRunner(env, policy, nsteps=steps_per_sample, step_var=step_var)
   storage = InteractionStorage.from_env(env, storage_size, init_size)
-  return ExperienceReplayRunner(runner, storage, batch_size)
+  return ExperienceReplayRunner(runner, storage, batch_size, nstep)

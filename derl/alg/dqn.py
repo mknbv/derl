@@ -36,8 +36,9 @@ class DQN(BaseAlgorithm):
     self.target_model.set_weights(self.model.get_weights())
     self.last_target_update_step.assign(self.step_var.variable)
 
-  def compute_qvalues(self, observations, actions=None):
-    """ Computes qvalues for given observations.
+  def make_predictions(self, observations, actions=None):
+    """ Applies a model to given observations and selects
+    predictions based on actions.
 
     If actions are specified uses training model, otherwise target model.
     If actions are not given uses argmax over training model or
@@ -53,22 +54,31 @@ class DQN(BaseAlgorithm):
     qvalues = tf.gather_nd(qvalues, indices)
     return qvalues
 
-  def loss(self, data):
-    obs, actions, rewards, resets, next_obs = (data[k] for k in (
-        "observations", "actions", "rewards", "resets", "next_observations"))
-    next_qvalues = self.compute_qvalues(next_obs)
+  def compute_targets(self, rewards, resets, next_obs):
+    """ Computes target values. """
+    nsteps = rewards.shape[1]
+    targets = self.make_predictions(next_obs)
 
     if len({rewards.shape, resets.shape}) != 1:
       raise ValueError(
           "rewards, resets must have the same shapes, "
           f"got rewards.shape={rewards.shape}, resets.shape={resets.shape}")
-    if tuple(next_qvalues.shape) != resets.shape:
-      raise ValueError("argmax-qvalues have bad shape "
-                       f"{tuple(next_qvalues.shape)}, expected shape "
-                       f"{resets.shape}")
+    target_shape = rewards.shape[:1] + rewards.shape[2:]
+    if tuple(targets.shape) != target_shape:
+      raise ValueError("making predictions when computing targets gives bad "
+                       f"shape {tuple(targets.shape)}, expected shape "
+                       f"{target_shape}")
 
-    qtargets = rewards + (1 - resets) * self.gamma * next_qvalues
-    qvalues = self.compute_qvalues(obs, actions)
+    for t in reversed(range(nsteps)):
+      targets = rewards[:, t] + (1 - resets[:, t]) * self.gamma * targets
+    return targets
+
+  def loss(self, data):
+    obs, actions, rewards, resets, next_obs = (data[k] for k in (
+        "observations", "actions", "rewards", "resets", "next_observations"))
+
+    qtargets = self.compute_targets(rewards, resets, next_obs)
+    qvalues = self.make_predictions(obs, actions)
     tf.contrib.summary.scalar("dqn/r_squared", r_squared(qtargets, qvalues),
                               step=self.step_var)
     loss = tf.losses.huber_loss(qtargets, qvalues)
