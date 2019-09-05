@@ -91,19 +91,37 @@ class NatureDQNBase(tf.keras.models.Sequential):
     ])
 
 
-class NatureDQNModel(BaseOutputsModel):
+class NatureDQNModel(tf.keras.Model):
   """ Nature DQN model with possibly several outputs. """
   # pylint: disable=too-many-arguments
   def __init__(self,
                output_units,
                input_shape=(84, 84, 4),
+               nbins=None,
                ubyte_rescale=None,
                kernel_initializer=tf.initializers.orthogonal(sqrt(2)),
                bias_initializer=tf.initializers.zeros()):
     init = {"kernel_initializer": kernel_initializer,
             "bias_initializer": bias_initializer}
-    super().__init__(NatureDQNBase(input_shape, ubyte_rescale, **init),
-                     output_units, **init)
+    inputs = tf.keras.layers.Input(input_shape)
+    base = NatureDQNBase(input_shape, ubyte_rescale, **init)
+    if nbins is None:
+      outputs = compute_outputs(base(inputs), output_units, **init)
+      super().__init__(inputs=inputs, outputs=outputs)
+    else:
+      if isinstance(output_units, (list, tuple)):
+        output_units = list(output_units)
+        nactions = output_units[0]
+        output_units[0] *= nbins
+      else:
+        nactions = output_units
+        output_units *= nbins
+      outputs = compute_outputs(base(inputs), output_units, **init)
+      if isinstance(outputs, list):
+        outputs[0] = tf.keras.layers.Reshape((nactions, nbins))(outputs[0])
+      else:
+        outputs = tf.keras.layers.Reshape((nactions, nbins))(outputs)
+      super().__init__(inputs=inputs, outputs=outputs)
 
 
 class IMPALABase(tf.keras.Model):
