@@ -35,6 +35,7 @@ from .policies import Policy, ActorCriticPolicy, EpsilonGreedyPolicy
 from .alg import (
     A2C,
     DQN,
+    QR_DQN,
     ActorCriticImitation,
     PPO,
 )
