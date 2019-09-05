@@ -4,6 +4,27 @@ from derl.base import BaseAlgorithm
 from derl.common import r_squared
 
 
+class TargetUpdator:
+  """ Provides interface for updating target model with a given period. """
+  def __init__(self, model, target, step_var, period=40_000):
+    self.model = model
+    self.target = target
+    self.period = period
+    self.step_var = step_var
+    self.last_update_step = tf.Variable(int(self.step_var) - period,
+                                        dtype=tf.int64, trainable=False,
+                                        name="last_update_step")
+
+  def should_update(self):
+    """ Returns true if it is time to update target model. """
+    return int(self.step_var) - int(self.last_update_step) >= self.period
+
+  def update(self):
+    """ Updates target model variables with the trained model variables. """
+    self.target.set_weights(self.model.get_weights())
+    self.last_update_step.assign(self.step_var.variable)
+
+
 class DQN(BaseAlgorithm):
   """ Deep Q-Learning algorithm.
 
@@ -21,20 +42,8 @@ class DQN(BaseAlgorithm):
     self.target_model = target_model
     self.gamma = gamma
     self.double = double
-    self.target_update_period = target_update_period
-    self.last_target_update_step = tf.Variable(
-        int(self.step_var) - target_update_period,
-        dtype=tf.int64, trainable=False, name="last_target_update_step")
-
-  def should_update_target(self):
-    """ Returns true if it is time to update target model. """
-    return (int(self.step_var) - int(self.last_target_update_step)
-            >= self.target_update_period)
-
-  def update_target(self):
-    """ Updates target model variables with the trained model variables. """
-    self.target_model.set_weights(self.model.get_weights())
-    self.last_target_update_step.assign(self.step_var.variable)
+    self.target_updator = TargetUpdator(model, target_model,
+                                        self.step_var, target_update_period)
 
   def make_predictions(self, observations, actions=None):
     """ Applies a model to given observations and selects
@@ -91,6 +100,6 @@ class DQN(BaseAlgorithm):
     return gradients
 
   def step(self, data):
-    if self.should_update_target():
-      self.update_target()
+    if self.target_updator.should_update():
+      self.target_updator.update()
     super().step(data)
