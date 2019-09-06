@@ -34,16 +34,17 @@ class DQNLearner(Learner):
     }.get(env_type)
 
   @staticmethod
-  def make_default_model(env):
+  def make_model(env, init=None, **kwargs):
     """ Creates Nature-DQN model for a given env. """
-    init = dict(kernel_initializer=tf.initializers.he_uniform(),
-                bias_initializer=tf.initializers.he_uniform())
+    if init is None:
+      init = dict(kernel_initializer=tf.initializers.he_uniform(),
+                  bias_initializer=tf.initializers.he_uniform())
     return NatureDQNModel(input_shape=env.observation_space.shape,
-                          output_units=env.action_space.n, **init)
+                          output_units=env.action_space.n, **init, **kwargs)
 
   @staticmethod
   def make_runner(env, args, model=None):
-    model = model or DQNLearner.make_default_model(env)
+    model = model or DQNLearner.make_model(env)
     step_var = StepVariable("global_step", tf.train.create_global_step())
     epsilon = linear_anneal(
         "exploration_epsilon", args.exploration_epsilon_start,
@@ -63,7 +64,7 @@ class DQNLearner(Learner):
     model = runner.policy.model
     env = runner.env
     # TODO: support any model by clonning the model from runner.
-    target_model = DQNLearner.make_default_model(env)
+    target_model = DQNLearner.make_model(env)
     target_model.set_weights(model.get_weights())
 
     kwargs = vars(args)

@@ -9,7 +9,7 @@ tf.enable_eager_execution()
 def get_learners():
   """ Returns learner name to learner class mapping. """
   return {
-      k[:-len("Learner")].lower(): getattr(derl, k)
+      k[:-len("Learner")].lower().replace("_", "-"): getattr(derl, k)
       for k in dir(derl) if k != "Learner" and k.endswith("Learner")
   }
 
