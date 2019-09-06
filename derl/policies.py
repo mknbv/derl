@@ -98,5 +98,7 @@ class EpsilonGreedyPolicy(Policy):
     if np.random.random() <= epsilon:
       return {"actions": np.random.randint(self.model.output.shape[1].value)}
 
-    actions = np.argmax(_call_model(self.model, inputs).numpy(), -1)
-    return {"actions": actions}
+    preds = _call_model(self.model, inputs).numpy()
+    action_dims = preds.ndim - (inputs.ndim == self.model.input.shape.ndims)
+    qvalues = np.mean(preds, -1 if action_dims > 1 else ())
+    return {"actions": np.argmax(qvalues, -1)}
