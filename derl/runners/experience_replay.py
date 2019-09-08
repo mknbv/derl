@@ -29,14 +29,15 @@ class InteractionStorage:
 
   def get(self, indices, nstep=3):
     """ Returns `nstep` interactions starting from indices `indices`. """
-    obs = np.array(list(self.observations[indices]))
-    actions = np.array(list(self.actions[indices]))
     nstep_indices = (indices[:, None] + np.arange(nstep)[None]) % self.size
-    rewards = self.rewards[nstep_indices]
-    resets = self.resets[nstep_indices]
     next_indices = (indices + nstep) % self.size
-    next_obs = np.array(list(self.observations[next_indices]))
-    return obs, actions, rewards, resets, next_obs
+    return {
+        "observations": np.array(list(self.observations[indices])),
+        "actions": np.array(list(self.actions[indices])),
+        "rewards": self.rewards[nstep_indices],
+        "resets": self.resets[nstep_indices],
+        "next_observations": np.array(list(self.observations[next_indices])),
+    }
 
   def add(self, observation, action, reward, done):
     """ Adds new interaction to the storage. """
@@ -89,9 +90,7 @@ class ExperienceReplayRunner(BaseRunner):
     interactions = [trajectory[k] for k in ("observations", "actions",
                                             "rewards", "resets")]
     self.storage.add_batch(*interactions)
-    return dict(zip(
-        ("observations", "actions", "rewards", "resets", "next_observations"),
-        self.storage.sample(self.batch_size, self.nstep)))
+    return self.storage.sample(self.batch_size, self.nstep)
 
 
 # pylint: disable=too-many-arguments
