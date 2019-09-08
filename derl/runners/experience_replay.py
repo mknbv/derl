@@ -46,12 +46,14 @@ class InteractionStorage:
 
   def add(self, observation, action, reward, done):
     """ Adds new interaction to the storage. """
-    self.observations[self.index] = observation
-    self.actions[self.index] = action
-    self.rewards[self.index] = reward
-    self.resets[self.index] = done
-    self.is_full = self.is_full or self.index + 1 == self.capacity
-    self.index = (self.index + 1) % self.capacity
+    index = self.index
+    self.observations[index] = observation
+    self.actions[index] = action
+    self.rewards[index] = reward
+    self.resets[index] = done
+    self.is_full = self.is_full or index + 1 == self.capacity
+    self.index = (index + 1) % self.capacity
+    return index
 
   def add_batch(self, observations, actions, rewards, resets):
     """ Adds a batch of interactions to the storage. """
@@ -70,6 +72,7 @@ class InteractionStorage:
     self.resets[indices] = resets
     self.is_full = self.is_full or self.index + batch_size >= self.capacity
     self.index = (self.index + batch_size) % self.capacity
+    return indices
 
   def sample(self, size, nstep=3):
     """ Returns random sample of interactions of specified size. """
