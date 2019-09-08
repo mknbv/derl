@@ -27,6 +27,17 @@ class InteractionStorage:
       obs = next_obs if not done else env.reset()
     return storage
 
+  def get(self, indices, nstep=3):
+    """ Returns `nstep` interactions starting from indices `indices`. """
+    obs = np.array(list(self.observations[indices]))
+    actions = np.array(list(self.actions[indices]))
+    nstep_indices = (indices[:, None] + np.arange(nstep)[None]) % self.size
+    rewards = self.rewards[nstep_indices]
+    resets = self.resets[nstep_indices]
+    next_indices = (indices + nstep) % self.size
+    next_obs = np.array(list(self.observations[next_indices]))
+    return obs, actions, rewards, resets, next_obs
+
   def add(self, observation, action, reward, done):
     """ Adds new interaction to the storage. """
     self.observations[self.index] = observation
@@ -61,15 +72,7 @@ class InteractionStorage:
     nosample_index = (self.index + self.size - nstep) % self.size
     inc_mask = indices >= nosample_index
     indices[inc_mask] = (indices[inc_mask] + nstep) % self.size
-
-    obs = np.array(list(self.observations[indices]))
-    actions = np.array(list(self.actions[indices]))
-    nstep_indices = (indices[:, None] + np.arange(nstep)[None]) % self.size
-    rewards = self.rewards[nstep_indices]
-    resets = self.resets[nstep_indices]
-    next_indices = (indices + nstep) % self.size
-    next_obs = np.array(list(self.observations[next_indices]))
-    return obs, actions, rewards, resets, next_obs
+    return self.get(indices, nstep)
 
 
 class ExperienceReplayRunner(BaseRunner):
