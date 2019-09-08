@@ -9,9 +9,9 @@ from derl.train import StepVariable, linear_anneal
 
 class QR_DQNLearner(DQNLearner): # pylint: disable=invalid-name
   """ Distributional RL with quantile regression learner. """
-  @staticmethod
-  def get_defaults(env_type="atari"):
-    defaults = DQNLearner.get_defaults(env_type)
+  @classmethod
+  def get_parser_defaults(cls, env_type="atari"):
+    defaults = DQNLearner.get_parser_defaults(env_type)
     if defaults is None:
       return defaults
     defaults["nbins"] = 200

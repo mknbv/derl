@@ -12,8 +12,8 @@ from derl.train import linear_anneal
 
 class A2CLearner(Learner):
   """ Advantage Actor-Critic Learner. """
-  @staticmethod
-  def get_defaults(env_type="atari"):
+  @classmethod
+  def get_parser_defaults(cls, env_type="atari"):
     return {
         "atari": {
             "nenvs": 8,

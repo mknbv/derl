@@ -12,9 +12,9 @@ class Learner:
     self.runner = runner
     self.alg = alg
 
-  @staticmethod
-  def get_defaults(env_type="atari"):
-    """ Returns default hyperparameters for specified env type. """
+  @classmethod
+  def get_parser_defaults(cls, env_type="atari"):
+    """ Returns defaults for argument parsing. """
     return {}[env_type]
 
   @staticmethod

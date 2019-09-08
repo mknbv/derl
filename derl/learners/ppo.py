@@ -11,8 +11,8 @@ from derl.train import linear_anneal
 class PPOLearner(Learner):
   """ Proximal Policy Optimization learner. """
 
-  @staticmethod
-  def get_defaults(env_type="atari"):
+  @classmethod
+  def get_parser_defaults(cls, env_type="atari"):
     defaults = {
         "atari": {
             "num-train-steps": 10e6,

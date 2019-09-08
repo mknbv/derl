@@ -22,9 +22,10 @@ def main():
   args, unknown_args = parser.parse_known_args()
   learner_class = learners[args.learner]
 
-  args = derl.get_args(atari_defaults=learner_class.get_defaults("atari"),
-                       mujoco_defaults=learner_class.get_defaults("mujoco"),
-                       args=unknown_args)
+  args = derl.get_args(
+      atari_defaults=learner_class.get_parser_defaults("atari"),
+      mujoco_defaults=learner_class.get_parser_defaults("mujoco"),
+      args=unknown_args)
 
   kwargs = vars(args)
   env = derl.env.make(args.env_id, kwargs.get("nenvs"), kwargs.get("seed"))

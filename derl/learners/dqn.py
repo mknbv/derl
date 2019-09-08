@@ -10,8 +10,8 @@ from derl.train import StepVariable, linear_anneal
 
 class DQNLearner(Learner):
   """ Deep Q-Learning Learner. """
-  @staticmethod
-  def get_defaults(env_type="atari"):
+  @classmethod
+  def get_parser_defaults(cls, env_type="atari"):
     return {
         "atari": {
             "num-train-steps": int(200e6),
