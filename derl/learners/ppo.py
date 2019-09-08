@@ -48,28 +48,27 @@ class PPOLearner(Learner):
     return defaults.get(env_type)
 
   @staticmethod
-  def make_runner(env, args, model=None):
+  def make_runner(env, model=None, **kwargs):
     model = (model if model is not None
              else make_model(env.observation_space, env.action_space, 1))
     policy = ActorCriticPolicy(model)
-    kwargs = vars(args)
     runner_kwargs = {key: kwargs[key] for key in
                      ["gamma", "lambda_", "num_epochs", "num_minibatches"]
                      if key in kwargs}
-    runner = make_ppo_runner(env, policy, args.num_runner_steps,
-                             args.num_train_steps, **runner_kwargs)
+    runner = make_ppo_runner(env, policy, kwargs["num_runner_steps"],
+                             kwargs["num_train_steps"], **runner_kwargs)
     return runner
 
   @staticmethod
-  def make_alg(runner, args):
-    lr = linear_anneal("lr", args.lr, args.num_train_steps,
+  def make_alg(runner, **kwargs):
+    lr = linear_anneal("lr", kwargs["lr"], kwargs["num_train_steps"],
                        step_var=runner.step_var)
-    if hasattr(args, "optimizer_epsilon"):
-      optimizer = tf.train.AdamOptimizer(lr, epsilon=args.optimizer_epsilon)
+    if "optimizer_epsilon" in kwargs:
+      optimizer = tf.train.AdamOptimizer(lr,
+                                         epsilon=kwargs["optimizer_epsilon"])
     else:
       optimizer = tf.train.AdamOptimizer(lr)
 
-    kwargs = vars(args)
     ppo_kwargs = {key: kwargs[key]
                   for key in ["value_loss_coef", "entropy_coef",
                               "cliprange", "max_grad_norm"]

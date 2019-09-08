@@ -32,24 +32,23 @@ class A2CLearner(Learner):
     }.get(env_type)
 
   @staticmethod
-  def make_runner(env, args, model=None):
+  def make_runner(env, model=None, **kwargs):
     if model is None:
       model = make_model(env.observation_space, env.action_space, 1)
     policy = ActorCriticPolicy(model)
-    kwargs = vars(args)
     gae_kwargs = {k: kwargs[k] for k in ("gamma", "lambda_") if k in kwargs}
     if "normalize_gae" in kwargs:
       gae_kwargs["normalize"] = kwargs.get("normalize_gae")
-    runner = EnvRunner(env, policy, args.num_runner_steps,
-                       nsteps=args.num_train_steps)
+    runner = EnvRunner(env, policy, kwargs["num_runner_steps"],
+                       nsteps=kwargs["num_train_steps"])
     runner = TransformInteractions(
         runner, [GAE(policy, **gae_kwargs), MergeTimeBatch()])
     return runner
 
   @staticmethod
-  def make_alg(runner, args):
-    lr = linear_anneal("lr", args.lr, args.num_train_steps, runner.step_var)
-    kwargs = vars(args)
+  def make_alg(runner, **kwargs):
+    lr = linear_anneal("lr", kwargs["lr"], kwargs["num_train_steps"],
+                       runner.step_var)
     optimizer_kwargs = {
         "decay": kwargs.pop("optimizer_decay", 0.99),
         "epsilon": kwargs.pop("optimizer_epsilon", 1e-5),

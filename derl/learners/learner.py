@@ -18,12 +18,12 @@ class Learner:
     return {}[env_type]
 
   @staticmethod
-  def make_runner(env, args, model=None):
+  def make_runner(env, model=None, **kwargs):
     """ Creates a runner based on the argparse Namespace. """
     raise NotImplementedError("Learner does not implement make_runner method")
 
   @staticmethod
-  def make_alg(runner, args):
+  def make_alg(runner, **kwargs):
     """ Creates learner algorithm. """
     raise NotImplementedError("Learner does not implement make_alg method")
 
@@ -35,8 +35,9 @@ class Learner:
   @classmethod
   def from_env_args(cls, env, args, model=None):
     """ Creates a learner instance from environment and args namespace. """
-    runner = cls.make_runner(env, args, model=model)
-    return cls(runner, cls.make_alg(runner, args))
+    kwargs = vars(args)
+    runner = cls.make_runner(env, model=model, **kwargs)
+    return cls(runner, cls.make_alg(runner, **kwargs))
 
   def learning_loop(self):
     """ Learning loop of the learner. """

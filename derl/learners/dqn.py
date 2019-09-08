@@ -46,37 +46,36 @@ class DQNLearner(Learner):
                           output_units=env.action_space.n, **init, **kwargs)
 
   @staticmethod
-  def make_runner(env, args, model=None):
+  def make_runner(env, model=None, **kwargs):
     model = model or DQNLearner.make_model(env)
     step_var = StepVariable("global_step", tf.train.create_global_step())
     epsilon = linear_anneal(
-        "exploration_epsilon", args.exploration_epsilon_start,
-        args.exploration_end_step, step_var, args.exploration_epsilon_end)
+        "exploration_epsilon", kwargs["exploration_epsilon_start"],
+        kwargs["exploration_end_step"], step_var,
+        kwargs["exploration_epsilon_end"])
     policy = EpsilonGreedyPolicy(model, epsilon)
-    kwargs = vars(args)
     runner_kwargs = {k: kwargs[k] for k in ("storage_size", "storage_init_size",
                                             "batch_size", "steps_per_sample",
                                             "nstep", "prioritized")
                      if k in kwargs}
-    runner = make_dqn_runner(env, policy, args.num_train_steps,
+    runner = make_dqn_runner(env, policy, kwargs["num_train_steps"],
                              step_var=step_var, **runner_kwargs)
     return runner
 
   @staticmethod
-  def make_alg(runner, args):
+  def make_alg(runner, **kwargs):
     model = runner.policy.model
     env = runner.env
     # TODO: support any model by clonning the model from runner.
     target_model = DQNLearner.make_model(env)
     target_model.set_weights(model.get_weights())
 
-    kwargs = vars(args)
     optimizer_kwargs = {
         "decay": kwargs.get("decay", 0.95),
         "momentum": kwargs.get("momentum", 0.),
         "epsilon": kwargs.get("optimizer_epsilon", 0.01),
     }
-    optimizer = tf.train.RMSPropOptimizer(args.lr, **optimizer_kwargs)
+    optimizer = tf.train.RMSPropOptimizer(kwargs["lr"], **optimizer_kwargs)
     dqn_kwargs = {k: kwargs[k] for k in
                   ("gamma", "target_update_period", "double") if k in kwargs}
     alg = DQN(model, target_model, optimizer, **dqn_kwargs)
