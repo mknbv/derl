@@ -4,6 +4,7 @@ import tensorflow as tf
 from tqdm import tqdm
 
 from derl.train import StepVariable
+from derl.scripts.parsers import get_defaults_parser
 
 
 class Learner:
@@ -16,6 +17,13 @@ class Learner:
   def get_parser_defaults(cls, env_type="atari"):
     """ Returns defaults for argument parsing. """
     return {}[env_type]
+
+  @classmethod
+  def get_kwargs(cls, env_type="atari"):
+    """ Returns kwargs dict with default hyperparameters. """
+    dummy_parser = get_defaults_parser(cls.get_parser_defaults(env_type))
+    args = dummy_parser.parse_args([])
+    return vars(args)
 
   @staticmethod
   def make_runner(env, model=None, **kwargs):
@@ -33,9 +41,13 @@ class Learner:
     return self.alg.model
 
   @classmethod
-  def from_env_args(cls, env, args, model=None):
+  def make_with_args(cls, env, args, model=None):
     """ Creates a learner instance from environment and args namespace. """
-    kwargs = vars(args)
+    return cls.make_with_kwargs(env, model=model, **vars(args))
+
+  @classmethod
+  def make_with_kwargs(cls, env, model=None, **kwargs):
+    """ Creates a learner instance from environment and keyword args. """
     runner = cls.make_runner(env, model=model, **kwargs)
     return cls(runner, cls.make_alg(runner, **kwargs))
 
