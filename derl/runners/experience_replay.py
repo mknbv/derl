@@ -6,19 +6,19 @@ from .online import EnvRunner
 
 class InteractionStorage:
   """ Simple circular buffer that stores interactions. """
-  def __init__(self, size):
-    self.size = size
-    self.observations = np.empty(self.size, dtype=np.object)
-    self.actions = np.empty(self.size, dtype=np.object)
-    self.resets = np.empty(self.size, dtype=np.bool)
-    self.rewards = np.empty(self.size, dtype=np.float32)
+  def __init__(self, capacity):
+    self.capacity = capacity
+    self.observations = np.empty(self.capacity, dtype=np.object)
+    self.actions = np.empty(self.capacity, dtype=np.object)
+    self.resets = np.empty(self.capacity, dtype=np.bool)
+    self.rewards = np.empty(self.capacity, dtype=np.float32)
     self.index = 0
-    self.is_full = self.index >= self.size
+    self.is_full = self.index >= self.capacity
 
   @classmethod
-  def from_env(cls, env, size, init_size=50_000):
+  def from_env(cls, env, capacity, init_size=50_000):
     """ Creates storage and initializes it with random interactions. """
-    storage = cls(size)
+    storage = cls(capacity)
     obs = env.reset()
     for _ in range(init_size):
       action = env.action_space.sample()
@@ -27,10 +27,15 @@ class InteractionStorage:
       obs = next_obs if not done else env.reset()
     return storage
 
+  @property
+  def size(self):
+    """ Returns the number elements stored. """
+    return self.capacity if self.is_full else self.index
+
   def get(self, indices, nstep=3):
     """ Returns `nstep` interactions starting from indices `indices`. """
-    nstep_indices = (indices[:, None] + np.arange(nstep)[None]) % self.size
-    next_indices = (indices + nstep) % self.size
+    nstep_indices = (indices[:, None] + np.arange(nstep)[None]) % self.capacity
+    next_indices = (indices + nstep) % self.capacity
     return {
         "observations": np.array(list(self.observations[indices])),
         "actions": np.array(list(self.actions[indices])),
@@ -45,8 +50,8 @@ class InteractionStorage:
     self.actions[self.index] = action
     self.rewards[self.index] = reward
     self.resets[self.index] = done
-    self.is_full = self.is_full or self.index + 1 == self.size
-    self.index = (self.index + 1) % self.size
+    self.is_full = self.is_full or self.index + 1 == self.capacity
+    self.index = (self.index + 1) % self.capacity
 
   def add_batch(self, observations, actions, rewards, resets):
     """ Adds a batch of interactions to the storage. """
@@ -58,21 +63,21 @@ class InteractionStorage:
           "first dimension, got first dim sizes: "
           f"{actions.shape[0]}, {rewards.shape[0]}, {resets.shape[0]}")
 
-    indices = (self.index + np.arange(batch_size)) % self.size
+    indices = (self.index + np.arange(batch_size)) % self.capacity
     self.observations[indices] = list(observations)
     self.actions[indices] = list(actions)
     self.rewards[indices] = rewards
     self.resets[indices] = resets
-    self.is_full = self.is_full or self.index + batch_size >= self.size
-    self.index = (self.index + batch_size) % self.size
+    self.is_full = self.is_full or self.index + batch_size >= self.capacity
+    self.index = (self.index + batch_size) % self.capacity
 
   def sample(self, size, nstep=3):
     """ Returns random sample of interactions of specified size. """
     indices = np.random.randint(self.index - nstep if not self.is_full
-                                else self.size - nstep, size=size)
-    nosample_index = (self.index + self.size - nstep) % self.size
+                                else self.capacity - nstep, size=size)
+    nosample_index = (self.index + self.capacity - nstep) % self.capacity
     inc_mask = indices >= nosample_index
-    indices[inc_mask] = (indices[inc_mask] + nstep) % self.size
+    indices[inc_mask] = (indices[inc_mask] + nstep) % self.capacity
     return self.get(indices, nstep)
 
 
