@@ -1,4 +1,5 @@
 """ Defines environment runner. """
+from abc import abstractmethod
 from collections import defaultdict
 import tensorflow as tf
 from derl.train import StepVariable
@@ -53,3 +54,23 @@ class EnvRunner:
       interactions["state"] = dict(latest_observations=obs)
       self.step_var.assign_add(self.batch_size * (self.nenvs or 1))
       yield dict(interactions)
+
+
+class RunnerWrapper:
+  """ Wraps an env runner. """
+  def __init__(self, runner):
+    self.runner = runner
+
+  def __getattr__(self, attr):
+    if attr not in {"env", "policy", "batch_size", "nsteps", "step_var",
+                    "nenvs", "is_exhausted"}:
+      raise AttributeError(f"'{self.__class__.__name__}' "
+                           f"has no attribute '{attr}'")
+    return getattr(self.runner, attr)
+
+  def __len__(self):
+    return len(self.runner)
+
+  @abstractmethod
+  def __iter__(self):
+    pass
