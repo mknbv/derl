@@ -3,6 +3,7 @@ from collections import defaultdict
 import numpy as np
 
 from derl.base import BaseRunner
+from derl.runners.env_runner import RunnerWrapper
 from .trajectory_transforms import (
     GAE, MergeTimeBatch, NormalizeAdvantages)
 
@@ -71,6 +72,28 @@ class EnvRunner(BaseRunner):
     for transform in self.transforms:
       transform(trajectory)
     return trajectory
+
+
+class TransformInteractions(RunnerWrapper):
+  """ Transforms ineractions by applying a list of callables. """
+  def __init__(self, runner, transforms=None, asarray=True):
+    super().__init__(runner)
+    self.transforms = transforms or []
+    self.asarray = asarray
+
+  def __iter__(self):
+    for interactions in self.runner:
+      if self.asarray:
+        for key, val in filter(lambda kv: kv[0] != "state",
+                               interactions.items()):
+          try:
+            interactions[key] = np.asarray(val)
+          except ValueError:
+            raise ValueError(
+                f"cannot convert value under key '{key}' to np.ndarray")
+      for transform in self.transforms:
+        transform(interactions)
+      yield interactions
 
 
 class TrajectorySampler(BaseRunner):
