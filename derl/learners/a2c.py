@@ -4,7 +4,7 @@ from derl.alg.a2c import A2C
 from derl.learners import Learner
 from derl.models import make_model
 from derl.policies import ActorCriticPolicy
-from derl.runners.online import EnvRunner
+from derl.runners.onpolicy import EnvRunner
 from derl.runners.trajectory_transforms import GAE, MergeTimeBatch
 from derl.train import linear_anneal
 

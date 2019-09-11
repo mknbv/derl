@@ -4,7 +4,7 @@ from derl.learners.learner import Learner
 from derl.models import make_model
 from derl.policies import ActorCriticPolicy
 from derl.alg.ppo import PPO
-from derl.runners.online import make_ppo_runner
+from derl.runners.onpolicy import make_ppo_runner
 from derl.train import linear_anneal
 
 

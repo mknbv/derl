@@ -7,7 +7,7 @@ from .runners.experience_replay import (
     ExperienceReplayRunner,
     make_dqn_runner,
 )
-from .runners.online import (
+from .runners.onpolicy import (
     EnvRunner,
     TrajectorySampler,
     make_ppo_runner,

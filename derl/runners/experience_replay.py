@@ -1,7 +1,7 @@
 """ Implements experience replay. """
 import numpy as np
 from derl.base import BaseRunner
-from .online import EnvRunner
+from derl.runners.onpolicy import EnvRunner
 
 
 class InteractionStorage:
