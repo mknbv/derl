@@ -96,6 +96,38 @@ class TransformInteractions(RunnerWrapper):
       yield interactions
 
 
+class IterateWithMinibatches(RunnerWrapper):
+  """ Iterates over interactions with minibatches for a given number of epochs.
+  """
+  def __init__(self, runner, num_epochs=3, num_minibatches=4,
+               shuffle_before_epoch=True):
+    super().__init__(runner)
+    self.num_epochs = num_epochs
+    self.num_minibatches = num_minibatches
+    self.shuffle_before_epoch = shuffle_before_epoch
+
+  @staticmethod
+  def shuffle_interactions(interactions):
+    """ Shuffles given interactions. """
+    sample_size = interactions["observations"].shape[0]
+    indices = np.random.permutation(sample_size)
+    for key, val in filter(lambda kv: kv[0] != "state", interactions.items()):
+      interactions[key] = val[indices]
+
+  def __iter__(self):
+    for interactions in self.runner:
+      for _ in range(self.num_epochs):
+        if self.shuffle_before_epoch:
+          IterateWithMinibatches.shuffle_interactions(interactions)
+
+        sample_size = interactions["observations"].shape[0]
+        mbsize = sample_size // self.num_minibatches
+        for start in range(0, sample_size, mbsize):
+          indices = np.arange(start, min(start + mbsize, sample_size))
+          yield dict((key, val[indices]) if key != "state" else (key, val)
+                     for key, val in interactions.items())
+
+
 class TrajectorySampler(BaseRunner):
   """ Samples parts of trajectory for specified number of epochs. """
   # pylint: disable=too-many-instance-attributes
