@@ -4,7 +4,8 @@ from derl.alg.a2c import A2C
 from derl.learners import Learner
 from derl.models import make_model
 from derl.policies import ActorCriticPolicy
-from derl.runners.onpolicy import EnvRunner
+from derl.runners.env_runner import EnvRunner
+from derl.runners.onpolicy import TransformInteractions
 from derl.runners.trajectory_transforms import GAE, MergeTimeBatch
 from derl.train import linear_anneal
 
@@ -39,8 +40,11 @@ class A2CLearner(Learner):
     gae_kwargs = {k: kwargs[k] for k in ("gamma", "lambda_") if k in kwargs}
     if "normalize_gae" in kwargs:
       gae_kwargs["normalize"] = kwargs.get("normalize_gae")
-    transforms = [GAE(policy, **gae_kwargs), MergeTimeBatch()]
-    return EnvRunner(env, policy, args.num_runner_steps, transforms=transforms)
+    runner = EnvRunner(env, policy, args.num_runner_steps,
+                       nsteps=args.num_train_steps)
+    runner = TransformInteractions(
+        runner, [GAE(policy, **gae_kwargs), MergeTimeBatch()])
+    return runner
 
   @staticmethod
   def make_alg(runner, args):
