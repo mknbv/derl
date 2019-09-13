@@ -1,7 +1,7 @@
 """ Implements experience replay. """
 import numpy as np
-from derl.runners.env_runner import RunnerWrapper
-from derl.runners.onpolicy import EnvRunner, TransformInteractions
+from derl.runners.env_runner import EnvRunner as EnvRunnerV2, RunnerWrapper
+from derl.runners.onpolicy import TransformInteractions
 
 
 class InteractionStorage:
@@ -99,15 +99,18 @@ class ExperienceReplay(RunnerWrapper):
       self.storage.add_batch(*interactions)
       yield self.storage.sample(self.batch_size, self.nstep)
 
-# pylint: disable=too-many-arguments
-def make_dqn_runner(env, policy, storage_size,
-                    steps_per_sample=4,
-                    batch_size=32,
-                    nstep=3,
-                    init_size=50_000,
-                    step_var=None):
-  """ Creates experience replay runner as used typically used with DQN alg. """
-  runner = EnvRunner(env, policy, nsteps=steps_per_sample, step_var=step_var)
-  runner = TransformInteractions(runner)
-  storage = InteractionStorage.from_env(env, storage_size, init_size)
+
+def dqn_runner_wrap(runner, storage_size=1_000_000, batch_size=32, nstep=3,
+                    init_size=50_000):
+  """ Wraps runner as it is typically used with DQN alg. """
+  storage = InteractionStorage.from_env(runner.env, storage_size, init_size)
   return ExperienceReplay(runner, storage, batch_size, nstep)
+
+
+def make_dqn_runner(env, policy, num_train_steps, steps_per_sample=4,
+                    step_var=None, **wrap_kwargs):
+  """ Creates experience replay runner as used typically used with DQN alg. """
+  runner = EnvRunnerV2(env, policy, horizon=steps_per_sample,
+                       nsteps=num_train_steps, step_var=step_var)
+  runner = TransformInteractions(runner)
+  return dqn_runner_wrap(runner, **wrap_kwargs)

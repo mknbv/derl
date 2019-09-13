@@ -29,11 +29,11 @@ class QR_DQNLearner(DQNLearner): # pylint: disable=invalid-name
         args.exploration_end_step, step_var, args.exploration_epsilon_end)
     policy = EpsilonGreedyPolicy(model, epsilon)
     kwargs = vars(args)
-    runner_kwargs = {k: kwargs[k] for k in ("steps_per_sample", "batch_size",
+    runner_kwargs = {k: kwargs[k] for k in ("storage_size", "storage_init_size",
+                                            "batch_size", "steps_per_sample",
                                             "nstep")
                      if k in kwargs}
-    runner_kwargs["init_size"] = kwargs["storage_init_size"]
-    runner = make_dqn_runner(env, policy, args.storage_size,
+    runner = make_dqn_runner(env, policy, args.num_train_steps,
                              step_var=step_var, **runner_kwargs)
     return runner
 
