@@ -9,26 +9,6 @@ from derl.common import maybe_clip_by_global_norm_with_summary
 from .train import StepVariable
 
 
-class BaseRunner(ABC):
-  """ General data runner. """
-  def __init__(self, env, policy, step_var=None):
-    self.env = env
-    self.policy = policy
-    if step_var is None:
-      step_var = StepVariable(f"{camel2snake(self.__class__.__name__)}_step",
-                              tf.train.create_global_step())
-    self.step_var = step_var
-
-  @property
-  def nenvs(self):
-    """ Returns number of batched envs or `None` if env is not batched """
-    return getattr(self.env.unwrapped, "nenvs", None)
-
-  @abstractmethod
-  def get_next(self):
-    """ Returns next data object """
-
-
 def camel2snake(name):
   """ Converts camel case to snake case. """
   sub = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)

@@ -1,6 +1,6 @@
 """ Implements experience replay. """
 import numpy as np
-from derl.runners.env_runner import EnvRunner as EnvRunnerV2, RunnerWrapper
+from derl.runners.env_runner import EnvRunner, RunnerWrapper
 from derl.runners.onpolicy import TransformInteractions
 
 
@@ -110,7 +110,7 @@ def dqn_runner_wrap(runner, storage_size=1_000_000, batch_size=32, nstep=3,
 def make_dqn_runner(env, policy, num_train_steps, steps_per_sample=4,
                     step_var=None, **wrap_kwargs):
   """ Creates experience replay runner as used typically used with DQN alg. """
-  runner = EnvRunnerV2(env, policy, horizon=steps_per_sample,
-                       nsteps=num_train_steps, step_var=step_var)
+  runner = EnvRunner(env, policy, horizon=steps_per_sample,
+                     nsteps=num_train_steps, step_var=step_var)
   runner = TransformInteractions(runner)
   return dqn_runner_wrap(runner, **wrap_kwargs)

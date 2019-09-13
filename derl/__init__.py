@@ -1,6 +1,6 @@
 """ All derl imports. """
 from . import train, env
-from .base import BaseRunner, BaseAlgorithm
+from .base import BaseAlgorithm
 from .learners import *
 from .runners.experience_replay import (
     InteractionStorage,

@@ -44,7 +44,7 @@ class GAE:
 
     gae = np.zeros_like(values, dtype=np.float32)
     gae[-1] = rewards[-1] - values[-1]
-    observation = trajectory["state"]["latest_observation"]
+    observation = trajectory["state"]["latest_observations"]
     state = trajectory["state"].get("policy_state", None)
     last_value = self.policy.act(observation, state=state,
                                  update_state=False)["values"]
