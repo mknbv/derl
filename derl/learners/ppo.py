@@ -57,7 +57,7 @@ class PPOLearner(Learner):
                      ["gamma", "lambda_", "num_epochs", "num_minibatches"]
                      if key in kwargs}
     runner = make_ppo_runner(env, policy, args.num_runner_steps,
-                             **runner_kwargs)
+                             args.num_train_steps, **runner_kwargs)
     return runner
 
   @staticmethod

@@ -3,7 +3,7 @@ from collections import defaultdict
 import numpy as np
 
 from derl.base import BaseRunner
-from derl.runners.env_runner import RunnerWrapper
+from derl.runners.env_runner import EnvRunner as EnvRunnerV2, RunnerWrapper
 from .trajectory_transforms import (
     GAE, MergeTimeBatch, NormalizeAdvantages)
 
@@ -181,14 +181,20 @@ class TrajectorySampler(BaseRunner):
     return minibatch
 
 
-def make_ppo_runner(env, policy, num_runner_steps, gamma=0.99, lambda_=0.95,
+def ppo_runner_wrap(runner, gamma=0.99, lambda_=0.95,
                     num_epochs=3, num_minibatches=4):
-  """ Returns env runner for PPO """
+  """ Wrapps given runner for PPO training. """
+  env, policy = runner.env, runner.policy
   transforms = [GAE(policy, gamma=gamma, lambda_=lambda_, normalize=False)]
   if not policy.is_recurrent() and getattr(env.unwrapped, "nenvs", None):
     transforms.append(MergeTimeBatch())
-  runner = EnvRunner(env, policy, num_runner_steps, transforms=transforms)
-  runner = TrajectorySampler(runner, num_epochs=num_epochs,
-                             num_minibatches=num_minibatches,
-                             transforms=[NormalizeAdvantages()])
+  runner = TransformInteractions(runner, transforms)
+  runner = IterateWithMinibatches(runner, num_epochs, num_minibatches)
+  runner = TransformInteractions(runner, [NormalizeAdvantages()])
   return runner
+
+
+def make_ppo_runner(env, policy, horizon, nsteps, **wrap_kwargs):
+  """ Creates and wraps env runner for PPO training. """
+  runner = EnvRunnerV2(env, policy, horizon, nsteps)
+  return ppo_runner_wrap(runner, **wrap_kwargs)
