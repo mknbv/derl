@@ -76,12 +76,3 @@ class PPOLearner(Learner):
                   if key in kwargs}
     ppo = PPO(runner.policy, optimizer, **ppo_kwargs)
     return ppo
-
-  def learning_body(self):
-    data = self.runner.get_next()
-    loss = self.alg.step(data)
-    yield data, loss
-    while not self.runner.trajectory_is_stale():
-      data = self.runner.get_next()
-      loss = self.alg.step(data)
-      yield data, loss

@@ -29,7 +29,7 @@ def main():
   kwargs = vars(args)
   env = derl.env.make(args.env_id, kwargs.get("nenvs"), kwargs.get("seed"))
   learner = learner_class.from_env_args(env, args)
-  learner.learn(args.num_train_steps, args.logdir, args.log_period)
+  learner.learn(args.logdir, args.log_period)
 
 
 if __name__ == "__main__":
