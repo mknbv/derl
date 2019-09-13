@@ -7,14 +7,14 @@ from derl.train import StepVariable
 
 class EnvRunner:
   """ Iterable that interacts with an env. """
-  def __init__(self, env, policy, batch_size, step_var=None, nsteps=None):
+  def __init__(self, env, policy, horizon, nsteps=None, step_var=None):
     self.env = env
     self.policy = policy
     if step_var is None:
       step_var = StepVariable("env_runner_step", tf.train.create_global_step())
     self.step_var = step_var
     self.nsteps = nsteps
-    self.batch_size = batch_size
+    self.horizon = horizon
 
   @property
   def nenvs(self):
@@ -34,7 +34,7 @@ class EnvRunner:
     obs = self.env.reset()
     while not self.is_exhausted():
       interactions = defaultdict(list)
-      for _ in range(self.batch_size):
+      for _ in range(self.horizon):
         act = self.policy.act(obs)
         interactions["observations"].append(obs)
         if "actions" not in act:
@@ -52,7 +52,7 @@ class EnvRunner:
         obs = self.env.reset() if self.nenvs is None and done else new_obs
 
       interactions["state"] = dict(latest_observations=obs)
-      self.step_var.assign_add(self.batch_size * (self.nenvs or 1))
+      self.step_var.assign_add(self.horizon * (self.nenvs or 1))
       yield dict(interactions)
 
 
@@ -62,7 +62,7 @@ class RunnerWrapper:
     self.runner = runner
 
   def __getattr__(self, attr):
-    if attr not in {"env", "policy", "batch_size", "nsteps", "step_var",
+    if attr not in {"env", "policy", "horizon", "nsteps", "step_var",
                     "nenvs", "is_exhausted"}:
       raise AttributeError(f"'{self.__class__.__name__}' "
                            f"has no attribute '{attr}'")
