@@ -4,7 +4,7 @@ from .base import BaseRunner, BaseAlgorithm
 from .learners import *
 from .runners.experience_replay import (
     InteractionStorage,
-    ExperienceReplayRunner,
+    ExperienceReplay,
     make_dqn_runner,
 )
 from .runners.onpolicy import (

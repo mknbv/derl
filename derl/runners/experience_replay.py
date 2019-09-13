@@ -1,7 +1,7 @@
 """ Implements experience replay. """
 import numpy as np
-from derl.base import BaseRunner
-from derl.runners.onpolicy import EnvRunner
+from derl.runners.env_runner import RunnerWrapper
+from derl.runners.onpolicy import EnvRunner, TransformInteractions
 
 
 class InteractionStorage:
@@ -84,22 +84,20 @@ class InteractionStorage:
     return self.get(indices, nstep)
 
 
-class ExperienceReplayRunner(BaseRunner):
-  """ Saves interactions to experience replay every nsteps steps. """
+class ExperienceReplay(RunnerWrapper):
+  """ Saves interactions to experience replay and samples from it. """
   def __init__(self, runner, storage, batch_size, nstep=3):
-    super().__init__(runner.env, runner.policy, runner.step_var)
-    self.runner = runner
+    super().__init__(runner)
     self.storage = storage
     self.batch_size = batch_size
     self.nstep = nstep
 
-  def get_next(self):
-    trajectory = self.runner.get_next()
-    interactions = [trajectory[k] for k in ("observations", "actions",
-                                            "rewards", "resets")]
-    self.storage.add_batch(*interactions)
-    return self.storage.sample(self.batch_size, self.nstep)
-
+  def __iter__(self):
+    for interactions in self.runner:
+      interactions = [interactions[k] for k in ("observations", "actions",
+                                                "rewards", "resets")]
+      self.storage.add_batch(*interactions)
+      yield self.storage.sample(self.batch_size, self.nstep)
 
 # pylint: disable=too-many-arguments
 def make_dqn_runner(env, policy, storage_size,
@@ -110,5 +108,6 @@ def make_dqn_runner(env, policy, storage_size,
                     step_var=None):
   """ Creates experience replay runner as used typically used with DQN alg. """
   runner = EnvRunner(env, policy, nsteps=steps_per_sample, step_var=step_var)
+  runner = TransformInteractions(runner)
   storage = InteractionStorage.from_env(env, storage_size, init_size)
-  return ExperienceReplayRunner(runner, storage, batch_size, nstep)
+  return ExperienceReplay(runner, storage, batch_size, nstep)
