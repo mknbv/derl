@@ -2,6 +2,7 @@
 import numpy as np
 from derl.runners.env_runner import EnvRunner, RunnerWrapper
 from derl.runners.onpolicy import TransformInteractions
+from derl.runners.sum_tree import SumTree
 
 
 class InteractionStorage:
@@ -82,6 +83,51 @@ class InteractionStorage:
     inc_mask = indices >= nosample_index
     indices[inc_mask] = (indices[inc_mask] + nstep) % self.capacity
     return self.get(indices, nstep)
+
+
+class PrioritizedStorage:
+  """ Wraps given storage to make it prioritized. """
+  def __init__(self, storage, start_max_priority=1):
+    self.storage = storage
+    self.sum_tree = SumTree(storage.capacity)
+    self.max_priority = start_max_priority
+
+  @property
+  def size(self):
+    """ Returns the number elements stored. """
+    return self.storage.size
+
+  @property
+  def capacity(self):
+    """ Returns the max possible number of elements that could be stored. """
+    return self.storage.capacity
+
+  def add(self, *data):
+    """ Adds data to storage. """
+    index = self.storage.add(*data)
+    self.sum_tree.replace(index, self.max_priority)
+    return index
+
+  def add_batch(self, *data):
+    """ Adds batch of data to storage. """
+    indices = self.storage.add_batch(*data)
+    self.sum_tree.replace(indices, np.full(indices.size, self.max_priority))
+    return indices
+
+  def sample(self, size, nstep=3):
+    """ Samples data from storage. """
+    sums = np.linspace(0, self.sum_tree.sum, size + 1)
+    samples = np.random.uniform(sums[:-1], sums[1:])
+    indices = self.sum_tree.retrieve(samples)
+    sample = self.storage.get(indices, nstep)
+    sample["indices"] = indices
+    sample["log_probs"] = (np.log(self.sum_tree.get_value(indices))
+                           - np.log(self.sum_tree.sum))
+    return sample
+
+  def update_priorities(self, indices, priorities):
+    """ Updates priorities. """
+    self.sum_tree.replace(indices, priorities)
 
 
 class ExperienceReplay(RunnerWrapper):
