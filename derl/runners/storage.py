@@ -14,18 +14,6 @@ class InteractionStorage:
     self.index = 0
     self.is_full = self.index >= self.capacity
 
-  @classmethod
-  def from_env(cls, env, capacity, init_size=50_000):
-    """ Creates storage and initializes it with random interactions. """
-    storage = cls(capacity)
-    obs = env.reset()
-    for _ in range(init_size):
-      action = env.action_space.sample()
-      next_obs, rew, done, _ = env.step(action)
-      storage.add(obs, action, rew, done)
-      obs = next_obs if not done else env.reset()
-    return storage
-
   @property
   def size(self):
     """ Returns the number elements stored. """
@@ -83,32 +71,22 @@ class InteractionStorage:
     return self.get(indices, nstep)
 
 
-class PrioritizedStorage:
+class PrioritizedStorage(InteractionStorage):
   """ Wraps given storage to make it prioritized. """
-  def __init__(self, storage, start_max_priority=1):
-    self.storage = storage
-    self.sum_tree = SumTree(storage.capacity)
+  def __init__(self, capacity, start_max_priority=1):
+    super().__init__(capacity)
+    self.sum_tree = SumTree(capacity)
     self.max_priority = start_max_priority
 
-  @property
-  def size(self):
-    """ Returns the number elements stored. """
-    return self.storage.size
-
-  @property
-  def capacity(self):
-    """ Returns the max possible number of elements that could be stored. """
-    return self.storage.capacity
-
-  def add(self, *data):
+  def add(self, observation, action, reward, done):
     """ Adds data to storage. """
-    index = self.storage.add(*data)
+    index = super().add(observation, action, reward, done)
     self.sum_tree.replace(index, self.max_priority)
     return index
 
-  def add_batch(self, *data):
+  def add_batch(self, observations, actions, rewards, resets):
     """ Adds batch of data to storage. """
-    indices = self.storage.add_batch(*data)
+    indices = super().add_batch(observations, actions, rewards, resets)
     self.sum_tree.replace(indices, np.full(indices.size, self.max_priority))
     return indices
 
@@ -117,7 +95,7 @@ class PrioritizedStorage:
     sums = np.linspace(0, self.sum_tree.sum, size + 1)
     samples = np.random.uniform(sums[:-1], sums[1:])
     indices = self.sum_tree.retrieve(samples)
-    sample = self.storage.get(indices, nstep)
+    sample = super().get(indices, nstep)
     sample["indices"] = indices
     sample["log_probs"] = (np.log(self.sum_tree.get_value(indices))
                            - np.log(self.sum_tree.sum))
