@@ -5,26 +5,46 @@ from derl.runners.storage import InteractionStorage
 
 
 class ExperienceReplay(RunnerWrapper):
-  """ Saves interactions to experience replay and samples from it. """
-  def __init__(self, runner, storage, batch_size, nstep=3):
+  """ Saves interactions to storage and samples from it. """
+  def __init__(self, runner, storage, storage_init_size=50_000,
+               batch_size=32, nstep=3):
     super().__init__(runner)
     self.storage = storage
+    self.storage_init_size = storage_init_size
     self.batch_size = batch_size
     self.nstep = nstep
 
-  def __iter__(self):
-    for interactions in self.runner:
+  def initialize_storage(self):
+    """ Initializes the storage with random interactions with environment. """
+    if self.storage.size != 0:
+      raise ValueError(f"Storage has size {self.storage.size}, but "
+                       "but initialization requires it to be empty")
+    obs = self.env.reset()
+    for _ in range(self.storage_init_size):
+      action = self.env.action_space.sample()
+      next_obs, rew, done, _ = self.env.step(action)
+      self.storage.add(obs, action, rew, done)
+      obs = next_obs if not done else self.env.reset()
+    return obs
+
+  def run(self, obs=None):
+    if obs is not None:
+      raise ValueError("obs can only be None when running with experience "
+                       f"replay, got {obs}")
+    obs = self.initialize_storage()
+    for interactions in self.runner.run(obs=obs):
       interactions = [interactions[k] for k in ("observations", "actions",
                                                 "rewards", "resets")]
       self.storage.add_batch(*interactions)
       yield self.storage.sample(self.batch_size, self.nstep)
 
 
-def dqn_runner_wrap(runner, storage_size=1_000_000, batch_size=32, nstep=3,
-                    init_size=50_000):
+def dqn_runner_wrap(runner, storage_size=1_000_000, storage_init_size=50_000,
+                    batch_size=32, nstep=3):
   """ Wraps runner as it is typically used with DQN alg. """
-  storage = InteractionStorage.from_env(runner.env, storage_size, init_size)
-  return ExperienceReplay(runner, storage, batch_size, nstep)
+  storage = InteractionStorage(storage_size)
+  return ExperienceReplay(runner, storage, storage_init_size,
+                          batch_size, nstep)
 
 
 def make_dqn_runner(env, policy, num_train_steps, steps_per_sample=4,

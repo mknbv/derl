@@ -40,7 +40,7 @@ class Learner:
 
   def learning_loop(self):
     """ Learning loop of the learner. """
-    for interactions in self.runner:
+    for interactions in self.runner.run():
       yield interactions, self.alg.step(interactions)
 
   def learning_generator(self, logdir=None, log_period=1):

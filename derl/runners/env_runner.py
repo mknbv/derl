@@ -30,8 +30,10 @@ class EnvRunner:
     the current step. """
     return int(self.nsteps if self.nsteps is not None else self.step_var)
 
-  def __iter__(self):
-    obs = self.env.reset()
+  def run(self, obs=None):
+    """ Interacts with the environment starting from obs for horizon steps. """
+    if obs is None:
+      obs = self.env.reset()
     while not self.is_exhausted():
       interactions = defaultdict(list)
       for _ in range(self.horizon):
@@ -55,7 +57,6 @@ class EnvRunner:
       self.step_var.assign_add(self.horizon * (self.nenvs or 1))
       yield dict(interactions)
 
-
 class RunnerWrapper:
   """ Wraps an env runner. """
   def __init__(self, runner):
@@ -72,5 +73,5 @@ class RunnerWrapper:
     return len(self.runner)
 
   @abstractmethod
-  def __iter__(self):
-    pass
+  def run(self, obs=None):
+    """ Interacts with the environment starting from obs for horizon steps. """

@@ -13,8 +13,8 @@ class TransformInteractions(RunnerWrapper):
     self.transforms = transforms or []
     self.asarray = asarray
 
-  def __iter__(self):
-    for interactions in self.runner:
+  def run(self, obs=None):
+    for interactions in self.runner.run(obs=None):
       if self.asarray:
         for key, val in filter(lambda kv: kv[0] != "state",
                                interactions.items()):
@@ -46,8 +46,8 @@ class IterateWithMinibatches(RunnerWrapper):
     for key, val in filter(lambda kv: kv[0] != "state", interactions.items()):
       interactions[key] = val[indices]
 
-  def __iter__(self):
-    for interactions in self.runner:
+  def run(self, obs=None):
+    for interactions in self.runner.run(obs=obs):
       for _ in range(self.num_epochs):
         if self.shuffle_before_epoch:
           IterateWithMinibatches.shuffle_interactions(interactions)
