@@ -22,7 +22,8 @@ class QR_DQNLearner(DQNLearner): # pylint: disable=invalid-name
 
   @staticmethod
   def make_runner(env, model=None, **kwargs):
-    model = DQNLearner.make_model(env, nbins=kwargs.get("nbins", 200))
+    model = DQNLearner.make_model(env, nbins=kwargs.get("nbins", 200),
+                                  dueling=kwargs.get("dueling", True))
     step_var = StepVariable("global_step", tf.train.create_global_step())
     epsilon = linear_anneal(
         "exploration_epsilon", kwargs["exploration_epsilon_start"],
@@ -40,8 +41,7 @@ class QR_DQNLearner(DQNLearner): # pylint: disable=invalid-name
   @staticmethod
   def make_alg(runner, **kwargs):
     model = runner.policy.model
-    target_model = DQNLearner.make_model(
-        runner.env, nbins=model.output.shape[-1].value)
+    target_model = DQNLearner.make_model(runner.env, nbins=model.nbins)
     target_model.set_weights(model.get_weights())
     epsilon = kwargs.get("optimizer_epsilon", 0.01 / 32)
     optimizer = tf.train.AdamOptimizer(kwargs["lr"], epsilon=epsilon)

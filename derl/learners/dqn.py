@@ -15,6 +15,7 @@ class DQNLearner(Learner):
     return {
         "atari": {
             "num-train-steps": int(200e6),
+            "no-dueling": dict(action="store_false", dest="dueling"),
             "exploration-epsilon-start": 1.,
             "exploration-epsilon-end": 0.01,
             "exploration-end-step": int(1e6),
@@ -47,7 +48,8 @@ class DQNLearner(Learner):
 
   @staticmethod
   def make_runner(env, model=None, **kwargs):
-    model = model or DQNLearner.make_model(env)
+    model = model or DQNLearner.make_model(
+        env, dueling=kwargs.get("dueling", True))
     step_var = StepVariable("global_step", tf.train.create_global_step())
     epsilon = linear_anneal(
         "exploration_epsilon", kwargs["exploration_epsilon_start"],
