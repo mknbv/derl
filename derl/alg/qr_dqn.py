@@ -61,9 +61,8 @@ class QR_DQN(DQN): # pylint: disable=invalid-name
     obs, actions, rewards, resets, next_obs = (data[k] for k in (
         "observations", "actions", "rewards", "resets", "next_observations"))
 
-    nbins = self.model.output.shape[-1].value
-    rewards = np.tile(rewards[..., None], nbins)
-    resets = np.tile(resets[..., None], nbins)
+    rewards = np.tile(rewards[..., None], self.model.nbins)
+    resets = np.tile(resets[..., None], self.model.nbins)
     target_dist = self.compute_targets(rewards, resets, next_obs)
     dist = self.make_predictions(obs, actions)
     tf.contrib.summary.scalar(

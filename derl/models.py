@@ -97,31 +97,46 @@ class NatureDQNModel(tf.keras.Model):
   def __init__(self,
                output_units,
                input_shape=(84, 84, 4),
+               dueling=False,
                nbins=None,
                ubyte_rescale=None,
                kernel_initializer=tf.initializers.orthogonal(sqrt(2)),
                bias_initializer=tf.initializers.zeros()):
+    super().__init__()
+    self.dueling = dueling
+    self.nbins = nbins
+    self.single_output = not isinstance(output_units, (list, tuple))
+    self.output_units = ([output_units] if self.single_output
+                         else list(output_units))
+    if nbins is not None:
+      self.output_units[0] *= nbins
+    if dueling:
+      self.output_units.append(nbins or 1)
     init = {"kernel_initializer": kernel_initializer,
             "bias_initializer": bias_initializer}
-    inputs = tf.keras.layers.Input(input_shape)
-    base = NatureDQNBase(input_shape, ubyte_rescale, **init)
-    if nbins is None:
-      outputs = compute_outputs(base(inputs), output_units, **init)
-      super().__init__(inputs=inputs, outputs=outputs)
-    else:
-      if isinstance(output_units, (list, tuple)):
-        output_units = list(output_units)
-        nactions = output_units[0]
-        output_units[0] *= nbins
-      else:
-        nactions = output_units
-        output_units *= nbins
-      outputs = compute_outputs(base(inputs), output_units, **init)
-      if isinstance(outputs, list):
-        outputs[0] = tf.keras.layers.Reshape((nactions, nbins))(outputs[0])
-      else:
-        outputs = tf.keras.layers.Reshape((nactions, nbins))(outputs)
-      super().__init__(inputs=inputs, outputs=outputs)
+    self.base = NatureDQNBase(input_shape, ubyte_rescale, **init)
+    self.output_layers = [tf.keras.layers.Dense(units=n, **init)
+                          for n in self.output_units]
+
+  @property
+  def input(self):
+    return self.base.input
+
+  def call(self, inputs, training=True, mask=None):
+    base_outputs = self.base(inputs)
+    outputs = [layer(base_outputs) for layer in self.output_layers]
+    if self.nbins is not None:
+      nactions = self.output_units[0] // self.nbins
+      outputs[0] = tf.reshape(outputs[0], (-1, nactions, self.nbins))
+    if self.dueling:
+      advantages, values = outputs[0], outputs.pop()
+      values = tf.reshape(
+          values, (-1, 1, self.nbins) if self.nbins is not None else (-1, 1))
+      outputs[0] = (values + advantages
+                    - tf.reduce_mean(advantages, 1, keepdims=True))
+    if self.single_output:
+      outputs = outputs[0]
+    return outputs
 
 
 class IMPALABase(tf.keras.Model):
