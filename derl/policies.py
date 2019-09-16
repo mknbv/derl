@@ -84,9 +84,10 @@ class ActorCriticPolicy(Policy):
 
 class EpsilonGreedyPolicy(Policy):
   """ Epsilon greedy policy. """
-  def __init__(self, model, epsilon=0.05):
+  def __init__(self, model, epsilon=0.05, nactions=None):
     self.model = model
     self.epsilon = epsilon
+    self.nactions = nactions
 
   def act(self, inputs, state=None, update_state=True, training=False):
     if state is not None:
@@ -95,8 +96,12 @@ class EpsilonGreedyPolicy(Policy):
     epsilon = self.epsilon
     if isinstance(epsilon, (tf.Tensor, tf.Variable)):
       epsilon = epsilon.numpy()
+    if self.nactions is None:
+      preds = _call_model(self.model, inputs).numpy()
+      action_dim = 0 if preds.ndim < self.model.input.shape.ndims else 1
+      self.nactions = preds.shape[action_dim]
     if np.random.random() <= epsilon:
-      return {"actions": np.random.randint(self.model.output.shape[1].value)}
+      return {"actions": np.random.randint(self.nactions)}
 
     preds = _call_model(self.model, inputs).numpy()
     action_dims = preds.ndim - (inputs.ndim == self.model.input.shape.ndims)
