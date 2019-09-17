@@ -20,6 +20,9 @@ class DQNLearner(Learner):
             "exploration-end-step": int(1e6),
             "storage-size": int(1e6),
             "storage-init-size": int(50e3),
+            "not-prioritized": dict(action="store_false", dest="prioritized"),
+            "per-alpha": 0.6,
+            "per-beta": dict(type=float, default=(0.4, 1.), nargs=2),
             "steps-per-sample": 4,
             "batch-size": 32,
             "nstep": 3,
@@ -53,7 +56,7 @@ class DQNLearner(Learner):
     kwargs = vars(args)
     runner_kwargs = {k: kwargs[k] for k in ("storage_size", "storage_init_size",
                                             "batch_size", "steps_per_sample",
-                                            "nstep")
+                                            "nstep", "prioritized")
                      if k in kwargs}
     runner = make_dqn_runner(env, policy, args.num_train_steps,
                              step_var=step_var, **runner_kwargs)

@@ -90,7 +90,10 @@ class DQN(BaseAlgorithm):
     qvalues = self.make_predictions(obs, actions)
     tf.contrib.summary.scalar("dqn/r_squared", r_squared(qtargets, qvalues),
                               step=self.step_var)
-    loss = tf.losses.huber_loss(qtargets, qvalues)
+    if "update_priorities" in data:
+      data["update_priorities"](tf.abs(qtargets - qvalues).numpy())
+    loss = tf.losses.huber_loss(qtargets, qvalues,
+                                weights=data.get("weights", 1.))
     tf.contrib.summary.scalar("dqn/loss", loss, step=self.step_var)
     return loss
 
