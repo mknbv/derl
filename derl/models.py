@@ -53,8 +53,10 @@ class NatureDQNBase(tf.keras.models.Sequential):
   def __init__(self,
                input_shape=(84, 84, 4),
                ubyte_rescale=None,
+               noisy=True,
                kernel_initializer=tf.initializers.orthogonal(sqrt(2)),
                bias_initializer=tf.initializers.zeros()):
+    dense_class = NoisyDense if noisy else tf.keras.layers.Dense
     super().__init__([
         MaybeRescale(input_shape=input_shape,
                      ubyte_rescale=ubyte_rescale),
@@ -82,7 +84,7 @@ class NatureDQNBase(tf.keras.models.Sequential):
             bias_initializer=bias_initializer
         ),
         tf.keras.layers.Flatten(),
-        tf.keras.layers.Dense(
+        dense_class(
             units=512,
             activation=tf.nn.relu,
             kernel_initializer=kernel_initializer,
@@ -164,9 +166,10 @@ class NatureDQNModel(tf.keras.Model):
   def __init__(self,
                output_units,
                input_shape=(84, 84, 4),
+               ubyte_rescale=None,
+               noisy=False,
                dueling=False,
                nbins=None,
-               ubyte_rescale=None,
                kernel_initializer=tf.initializers.orthogonal(sqrt(2)),
                bias_initializer=tf.initializers.zeros()):
     super().__init__()
@@ -181,8 +184,9 @@ class NatureDQNModel(tf.keras.Model):
       self.output_units.append(nbins or 1)
     init = {"kernel_initializer": kernel_initializer,
             "bias_initializer": bias_initializer}
-    self.base = NatureDQNBase(input_shape, ubyte_rescale, **init)
-    self.output_layers = [tf.keras.layers.Dense(units=n, **init)
+    self.base = NatureDQNBase(input_shape, ubyte_rescale, noisy=noisy, **init)
+    dense_class = NoisyDense if noisy else tf.keras.layers.Dense
+    self.output_layers = [dense_class(units=n, **init)
                           for n in self.output_units]
 
   @property
