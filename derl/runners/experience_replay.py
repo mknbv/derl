@@ -14,27 +14,30 @@ class ExperienceReplay(RunnerWrapper):
     super().__init__(runner)
     self.storage = storage
     self.storage_init_size = storage_init_size
+    self.initialized_storage = False
     self.batch_size = batch_size
     self.nstep = nstep
 
-  def initialize_storage(self):
+  def initialize_storage(self, obs=None):
     """ Initializes the storage with random interactions with environment. """
+    if self.initialized_storage:
+      raise ValueError("storage is already initialized")
     if self.storage.size != 0:
       raise ValueError(f"storage has size {self.storage.size}, but "
                        "but initialization requires it to be empty")
-    obs = self.env.reset()
+    if obs is None:
+      obs = self.env.reset()
     for _ in range(self.storage_init_size):
       action = self.env.action_space.sample()
       next_obs, rew, done, _ = self.env.step(action)
       self.storage.add(obs, action, rew, done)
       obs = next_obs if not done else self.env.reset()
+    self.initialized_storage = True
     return obs
 
   def run(self, obs=None):
-    if obs is not None:
-      raise ValueError("obs can only be None when running with experience "
-                       f"replay, got {obs}")
-    obs = self.initialize_storage()
+    if not self.initialized_storage:
+      obs = self.initialize_storage(obs=obs)
     for interactions in self.runner.run(obs=obs):
       interactions = [interactions[k] for k in ("observations", "actions",
                                                 "rewards", "resets")]
