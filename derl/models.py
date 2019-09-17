@@ -91,6 +91,73 @@ class NatureDQNBase(tf.keras.models.Sequential):
     ])
 
 
+class NoisyDense(tf.keras.layers.Layer):
+  """ Adds noisy linear transformations to regular dense layer. """
+  # pylint: disable=too-many-instance-attributes
+  def __init__(self, units,
+               stddev=0.5,
+               factorized=True,
+               activation=None,
+               kernel_initializer="glorot_uniform",
+               bias_initializer="zeros"):
+    super().__init__()
+    self.units = units
+    self.stddev = stddev
+    self.factorized = factorized
+    self.activation = activation
+    self.kernel_initializer = tf.keras.initializers.get(kernel_initializer)
+    self.bias_initializer = tf.keras.initializers.get(bias_initializer)
+    self.regular_kernel = None
+    self.regular_bias = None
+    self.noise_kernel = None
+    self.noise_bias = None
+
+  def build(self, input_shape):
+    input_dim, output_dim = input_shape[-1].value, self.units
+    self.regular_kernel = self.add_variable(
+        "regular_kernel",
+        shape=(input_dim, output_dim),
+        initializer=self.kernel_initializer)
+    self.regular_bias = self.add_variable(
+        "regular_bias",
+        shape=(output_dim,),
+        initializer=self.bias_initializer)
+    self.noise_kernel = self.add_variable(
+        "noise_kernel",
+        shape=(input_dim, output_dim),
+        initializer=self.kernel_initializer)
+    self.noise_bias = self.add_variable(
+        "noise_bias",
+        shape=(output_dim,),
+        initializer=self.bias_initializer)
+
+  def apply_dense(self, inputs, kernel, bias): # pylint: disable=no-self-use
+    """ Applies dense layer with specified kernel and bias to given inputs. """
+    return tf.nn.bias_add(tf.linalg.matmul(inputs, kernel), bias)
+
+  def call(self, inputs): # pylint: disable=arguments-differ
+    input_dim, output_dim = self.regular_kernel.shape.as_list()
+    if self.factorized:
+      input_noise = tf.random.normal(shape=(input_dim,), stddev=self.stddev)
+      output_noise = tf.random.normal(shape=(output_dim,), stddev=self.stddev)
+      kernel_noise = input_noise[:, None] * output_noise[None]
+      bias_noise = output_noise
+    else:
+      kernel_noise = tf.random.normal(shape=(output_dim, input_dim),
+                                      stddev=self.stddev)
+      bias_noise = tf.random.normal(shape=(output_dim,), stddev=self.stddev)
+    noisy_kernel = self.noise_kernel * kernel_noise
+    noisy_bias = self.noise_bias * bias_noise
+
+    regular_outputs = self.apply_dense(
+        inputs, self.regular_kernel, self.regular_bias)
+    noise_outputs = self.apply_dense(inputs, noisy_kernel, noisy_bias)
+    outputs = tf.add(regular_outputs, noise_outputs)
+    if self.activation is not None:
+      outputs = self.activation(outputs)
+    return outputs
+
+
 class NatureDQNModel(tf.keras.Model):
   """ Nature DQN model with possibly several outputs. """
   # pylint: disable=too-many-arguments

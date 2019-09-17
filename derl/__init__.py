@@ -6,6 +6,7 @@ from .runners import *
 from .models import (
     MaybeRescale,
     NatureDQNBase,
+    NoisyDense,
     compute_outputs,
     BaseOutputsModel,
     NatureDQNModel,
