@@ -18,6 +18,7 @@ class PPOLearner(Learner):
             "num-train-steps": 10e6,
             "nenvs": 8,
             "num-runner-steps": 128,
+            "noisy": dict(action="store_true"),
             "gamma": 0.99,
             "lambda_": 0.95,
             "num-epochs": 3,
@@ -33,6 +34,7 @@ class PPOLearner(Learner):
             "num-train-steps": 1e6,
             "nenvs": dict(type=int, default=None),
             "num-runner-steps": 2048,
+            "noisy": dict(action="store_true"),
             "gamma": 0.99,
             "lambda_": 0.95,
             "num-epochs": 10,
@@ -50,7 +52,8 @@ class PPOLearner(Learner):
   @staticmethod
   def make_runner(env, model=None, **kwargs):
     model = (model if model is not None
-             else make_model(env.observation_space, env.action_space, 1))
+             else make_model(env.observation_space, env.action_space, 1,
+                             noisy=kwargs.get("noisy", False)))
     policy = ActorCriticPolicy(model)
     runner_kwargs = {key: kwargs[key] for key in
                      ["gamma", "lambda_", "num_epochs", "num_minibatches"]
