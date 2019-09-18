@@ -5,7 +5,7 @@ from derl.alg.dqn import DQN
 from derl.common import r_squared
 
 
-def qr_dqn_loss(targets, preds, huber_loss=True):
+def qr_dqn_loss(targets, preds, huber_loss=True, weights=1):
   """ Computes QR-DQN loss given targets and predictions. """
   if targets.ndim != 2 or targets.shape != preds.shape:
     raise ValueError(f"invalid shape(s) targets.shape={targets.shape}"
@@ -23,8 +23,10 @@ def qr_dqn_loss(targets, preds, huber_loss=True):
   delta_fn = (tf.losses.huber_loss if huber_loss else
               tf.losses.absolute_difference)
   delta = delta_fn(targets, preds, reduction=tf.losses.Reduction.NONE)
-  weights = tf.abs(midpoints[None, None] - overestimation)
-  loss = tf.reduce_sum(tf.reduce_mean(delta * weights, axis=[0, 1]))
+  quantile_weights = tf.abs(midpoints[None, None] - overestimation)
+  loss_vector = tf.reduce_sum(
+      tf.reduce_mean(delta * quantile_weights, axis=1), -1)
+  loss = tf.reduce_sum(weights * loss_vector, 0)
   return loss
 
 
@@ -68,8 +70,12 @@ class QR_DQN(DQN): # pylint: disable=invalid-name
         "qr_dqn/r_squared", r_squared(tf.reduce_mean(target_dist, -1),
                                       tf.reduce_mean(dist, -1)),
         step=self.step_var)
-
-    loss = qr_dqn_loss(target_dist, dist, huber_loss=self.huber_loss)
+    if "update_priorities" in data:
+      qpreds = tf.reduce_mean(dist, -1)
+      qtargets = tf.reduce_mean(target_dist, -1)
+      data["update_priorities"](tf.abs(qtargets - qpreds).numpy())
+    loss = qr_dqn_loss(target_dist, dist, huber_loss=self.huber_loss,
+                       weights=data.get("weights", 1.))
     tf.contrib.summary.scalar("qr_dqn/loss", loss, step=self.step_var)
     return loss
 
