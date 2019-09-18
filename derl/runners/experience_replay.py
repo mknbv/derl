@@ -9,14 +9,12 @@ from derl.train import linear_anneal
 
 class ExperienceReplay(RunnerWrapper):
   """ Saves interactions to storage and samples from it. """
-  def __init__(self, runner, storage, storage_init_size=50_000,
-               batch_size=32, nstep=3):
+  def __init__(self, runner, storage, storage_init_size=50_000, batch_size=32):
     super().__init__(runner)
     self.storage = storage
     self.storage_init_size = storage_init_size
     self.initialized_storage = False
     self.batch_size = batch_size
-    self.nstep = nstep
 
   def initialize_storage(self, obs=None):
     """ Initializes the storage with random interactions with environment. """
@@ -42,7 +40,7 @@ class ExperienceReplay(RunnerWrapper):
       interactions = [interactions[k] for k in ("observations", "actions",
                                                 "rewards", "resets")]
       self.storage.add_batch(*interactions)
-      yield self.storage.sample(self.batch_size, self.nstep)
+      yield self.storage.sample(self.batch_size)
 
 
 class PrioritizedExperienceReplay(ExperienceReplay):
@@ -70,7 +68,7 @@ class PrioritizedExperienceReplay(ExperienceReplay):
     """ Updates priorities for specified inidices. """
     # Need to as well update priorities for interactions that occurred before
     # those, for which errors are computed as in the paper.
-    mask = ~self.storage.get(indices, nstep=1)["resets"][:, 0]
+    mask = ~self.storage.get(indices)["resets"][:, 0]
     if not self.storage.is_full:
       mask &= indices > 0
     capacity = self.storage.capacity
@@ -98,14 +96,14 @@ def dqn_runner_wrap(runner, prioritized=True,
                     batch_size=32, nstep=3, **prioritized_kwargs):
   """ Wraps runner as it is typically used with DQN alg. """
   if prioritized:
-    storage = PrioritizedStorage(storage_size)
+    storage = PrioritizedStorage(storage_size, nstep)
     return PrioritizedExperienceReplay(
         runner, storage, **prioritized_kwargs,
         storage_init_size=storage_init_size,
-        batch_size=batch_size, nstep=nstep)
-  storage = InteractionStorage(storage_size)
+        batch_size=batch_size)
+  storage = InteractionStorage(storage_size, nstep)
   return ExperienceReplay(runner, storage, storage_init_size=storage_init_size,
-                          batch_size=batch_size, nstep=nstep)
+                          batch_size=batch_size)
 
 def make_dqn_runner(env, policy, num_train_steps, steps_per_sample=4,
                     step_var=None, **wrap_kwargs):
