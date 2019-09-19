@@ -24,6 +24,7 @@ class TestPPOLearner(TestCase):
     args = SimpleNamespace(**{key.replace("-", "_"): val
                               for key, val in defaults.items()})
     learner = PPOLearner.from_env_args(env, args)
+    learner.model.load_weights("testdata/ppo-atari/init-weights.hdf5")
 
     num_test_steps = 12
     expected = [

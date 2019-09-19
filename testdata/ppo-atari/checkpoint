@@ -1,0 +1,2 @@
+model_checkpoint_path: "init-weights.hdf5"
+all_model_checkpoint_paths: "init-weights.hdf5"
