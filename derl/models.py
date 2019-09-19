@@ -266,7 +266,7 @@ class MujocoModel(tf.keras.Model):
     return (logits, std, *outputs)
 
 
-def make_model(observation_space, action_space, other_outputs=None):
+def make_model(observation_space, action_space, other_outputs=None, **kwargs):
   """ Creates default model for given observation and action spaces. """
   if isinstance(other_outputs, int) or other_outputs is None:
     other_outputs = [other_outputs] if other_outputs is not None else []
@@ -276,7 +276,7 @@ def make_model(observation_space, action_space, other_outputs=None):
   if isinstance(action_space, gym.spaces.Discrete):
     output_units = [action_space.n, *other_outputs]
     return NatureDQNModel(input_shape=observation_space.shape,
-                          output_units=output_units)
+                          output_units=output_units, **kwargs)
   if isinstance(action_space, gym.spaces.Box):
     if len(action_space.shape) != 1:
       raise ValueError("when action space is an instance of gym.spaces.Box "
@@ -284,5 +284,5 @@ def make_model(observation_space, action_space, other_outputs=None):
                        f"len(action_space.shape) = {len(action_space.shape)}")
     output_units = [action_space.shape[0], *other_outputs]
     return MujocoModel(input_shape=observation_space.shape,
-                       output_units=output_units)
+                       output_units=output_units, **kwargs)
   raise ValueError(f"unsupported action space {action_space}")
