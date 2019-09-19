@@ -22,8 +22,9 @@ class QR_DQNLearner(DQNLearner): # pylint: disable=invalid-name
 
   @staticmethod
   def make_runner(env, model=None, **kwargs):
-    model = DQNLearner.make_model(env, nbins=kwargs.get("nbins", 200),
-                                  dueling=kwargs.get("dueling", True))
+    model = (model if model is not None
+             else DQNLearner.make_model(env, nbins=kwargs.get("nbins", 200),
+                                        dueling=kwargs.get("dueling", True)))
     step_var = StepVariable("global_step", tf.train.create_global_step())
     epsilon = linear_anneal(
         "exploration_epsilon", kwargs["exploration_epsilon_start"],
