@@ -67,8 +67,8 @@ class PPOLearner(Learner):
     lr = linear_anneal("lr", kwargs["lr"], kwargs["num_train_steps"],
                        step_var=runner.step_var)
     if "optimizer_epsilon" in kwargs:
-      optimizer = tf.train.AdamOptimizer(lr,
-                                         epsilon=kwargs["optimizer_epsilon"])
+      optimizer = tf.train.AdamOptimizer(
+          lr, epsilon=kwargs["optimizer_epsilon"])
     else:
       optimizer = tf.train.AdamOptimizer(lr)
 

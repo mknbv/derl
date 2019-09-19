@@ -1,7 +1,6 @@
 # pylint: disable=missing-docstring
 import random
 import tempfile
-from types import SimpleNamespace
 from unittest import TestCase
 import numpy as np
 import tensorflow as tf
@@ -18,12 +17,9 @@ class TestPPOLearner(TestCase):
     tf.random.set_random_seed(0)
 
   def test_atari(self):
-    defaults = PPOLearner.get_defaults("atari")
-    env = make_env("SpaceInvadersNoFrameskip-v4",
-                   nenvs=defaults["nenvs"], seed=0)
-    args = SimpleNamespace(**{key.replace("-", "_"): val
-                              for key, val in defaults.items()})
-    learner = PPOLearner.from_env_args(env, args)
+    kwargs = PPOLearner.get_kwargs("atari")
+    env = make_env("SpaceInvadersNoFrameskip-v4", nenvs=kwargs["nenvs"], seed=0)
+    learner = PPOLearner.make_with_kwargs(env, **kwargs)
     learner.model.load_weights("testdata/ppo-atari/init-weights.hdf5")
 
     num_test_steps = 12
