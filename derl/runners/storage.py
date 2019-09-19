@@ -132,7 +132,10 @@ class PrioritizedStorage(InteractionStorage):
     """ Samples data from storage. """
     sums = np.linspace(0, self.sum_tree.sum, size + 1)
     samples = np.random.uniform(sums[:-1], sums[1:])
-    indices = self.sum_tree.retrieve(samples)
+    # In some rare cases it might happen that sampling for different
+    # sums leads to same indices, but updating priorities works only with
+    # unique indices, which is why we only return unique indices here.
+    indices = np.unique(self.sum_tree.retrieve(samples))
     sample = super().get(indices)
     sample["indices"] = indices
     sample["log_probs"] = (np.log(self.sum_tree.get_value(indices))
