@@ -72,9 +72,10 @@ class PrioritizedExperienceReplay(ExperienceReplay):
     if not self.storage.is_full:
       mask &= indices > 0
     capacity = self.storage.capacity
-    prev_indices = (indices[mask] - 1 + capacity) % capacity
+    prev_indices = (indices - 1 + capacity) % capacity
+    mask &= ~np.isin(prev_indices, indices)
 
-    indices = np.concatenate([prev_indices, indices], 0)
+    indices = np.concatenate([prev_indices[mask], indices], 0)
     errors = np.concatenate([errors[mask] + self.epsilon, errors], 0)
     priorities = np.power(errors, self.alpha)
     self.storage.update_priorities(indices, priorities)

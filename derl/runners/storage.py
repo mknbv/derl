@@ -1,4 +1,5 @@
 """ Defines classes that store interactions. """
+from collections import deque
 import numpy as np
 from derl.runners.sum_tree import SumTree
 
@@ -51,7 +52,7 @@ class InteractionStorage:
   def get(self, indices):
     """ Returns `nstep` interactions starting from indices `indices`. """
     # pylint: disable=misplaced-comparison-constant
-    if not np.all((0 <= indices) & (indices < self.size)):
+    if indices.size and not np.all((0 <= indices) & (indices < self.size)):
       raise ValueError(f"indices out of range(0, {self.size}): {indices}")
     return self.arrays.get(indices, self.nstep)
 
@@ -94,18 +95,37 @@ class PrioritizedStorage(InteractionStorage):
   def __init__(self, capacity, nstep=3, start_max_priority=1):
     super().__init__(capacity, nstep)
     self.sum_tree = SumTree(capacity)
-    self.max_priority = start_max_priority
+    self.start_max_priority = start_max_priority
+    self.num_pending = self.nstep
+    self.pending_indices = deque([])
 
   def add(self, observation, action, reward, done):
     """ Adds data to storage. """
-    index = super().add(observation, action, reward, done)
-    self.sum_tree.replace(index, self.max_priority)
+    index = None
+    if len(self.pending_indices) == self.num_pending:
+      index = self.pending_indices.popleft()
+    newindex = super().add(observation, action, reward, done)
+    self.pending_indices.append(newindex)
+
+    indices, priorities = [newindex], [0]
+    if index is not None:
+      indices.append(index)
+      priorities.append(self.start_max_priority)
+    self.sum_tree.replace(indices, priorities)
     return index
 
   def add_batch(self, observations, actions, rewards, resets):
     """ Adds batch of data to storage. """
-    indices = super().add_batch(observations, actions, rewards, resets)
-    self.sum_tree.replace(indices, np.full(indices.size, self.max_priority))
+    newindices = super().add_batch(observations, actions, rewards, resets)
+    self.pending_indices.extend(newindices)
+    n = len(self.pending_indices) - self.num_pending
+    indices = np.array([self.pending_indices.popleft() for _ in range(n)])
+    num_new_pending = min(newindices.size, len(self.pending_indices))
+    newindices = newindices[-num_new_pending:]
+    priorities = np.concatenate([np.full(indices.size, self.start_max_priority),
+                                 np.zeros(newindices.size)], 0)
+    indices = np.concatenate([indices, newindices], 0)
+    self.sum_tree.replace(indices, priorities)
     return indices
 
   def sample(self, size):

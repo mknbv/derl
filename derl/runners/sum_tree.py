@@ -25,7 +25,7 @@ class SumTree:
       raise ValueError("index and value cannot have different shapes: "
                        f"index.shape={index.shape}, value.shape={value.shape}")
     # pylint: disable=misplaced-comparison-constant
-    if not np.all((0 <= index) & (index < self.size)):
+    if index.size and not np.all((0 <= index) & (index < self.size)):
       raise ValueError(f"index out of bounds [0, {self.size}): {index}")
     if np.unique(index).size != index.size:
       raise ValueError(f"index must be unique, got {index}")
