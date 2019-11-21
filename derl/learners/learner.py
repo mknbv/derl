@@ -56,7 +56,7 @@ class Learner:
     for interactions in self.runner.run():
       yield interactions, self.alg.step(interactions)
 
-  def learning_generator(self, logdir=None, log_freq=1e-5):
+  def learning_generator(self, logdir=None, log_freq=1e-5, disable_tqdm=False):
     """ Returns learning generator object. """
     if not getattr(self.runner.step_var, "auto_update", True):
       raise ValueError("learn method is not supported when runner.step_var "
@@ -75,7 +75,7 @@ class Learner:
     last_record_step = tf.Variable(step - log_period)
 
     learning_iterator = self.learning_loop()
-    with tqdm(total=len(self.runner)) as pbar:
+    with tqdm(total=len(self.runner), disable=disable_tqdm) as pbar:
       while True:
         summary_context = tf.contrib.summary.never_record_summaries
         should_record_summaries = step - last_record_step >= log_period
@@ -84,11 +84,11 @@ class Learner:
           summary_context = tf.contrib.summary.always_record_summaries
         try:
           with summary_context():
-            interactions, loss = next(learning_iterator)
+            step_result = next(learning_iterator)
           if should_record_summaries and step > old_step:
             last_record_step.assign(step)
           pbar.update(int(self.runner.step_var) - pbar.n)
-          yield interactions, loss
+          yield step_result
         except StopIteration:
           break
 
