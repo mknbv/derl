@@ -78,6 +78,12 @@ def get_seed(nenvs=None, seed=None):
   return seed
 
 
+def set_seed(env, seed=None):
+  """ Sets seed of a given env. """
+  env.seed(seed)
+  env.action_space.np_random.seed(seed)
+
+
 def nature_dqn_env(env_id, nenvs=None, seed=None,
                    summarize=True, episodic_life=True, clip_reward=True):
   """ Wraps env as in Nature DQN paper. """
@@ -99,7 +105,7 @@ def nature_dqn_env(env_id, nenvs=None, seed=None,
     return env
 
   env = gym.make(env_id)
-  env.seed(seed)
+  set_seed(env, seed)
   return nature_dqn_wrap(env, summarize=summarize,
                          episodic_life=episodic_life,
                          clip_reward=clip_reward)
@@ -137,7 +143,7 @@ def mujoco_env(env_id, nenvs=None, seed=None, summarize=True,
                        normalize_ret=normalize_ret)
 
   env = gym.make(env_id)
-  env.seed(seed)
+  set_seed(env, seed)
   return mujoco_wrap(env, summarize=summarize, normalize_obs=normalize_obs,
                      normalize_ret=normalize_ret)
 
@@ -160,7 +166,7 @@ def make(env_id, nenvs=None, seed=None, **kwargs):
 
   def _make(seed):
     env = gym.make(env_id, **kwargs)
-    env.seed(seed)
+    set_seed(env, seed)
     return env
 
   seed = get_seed(nenvs, seed)

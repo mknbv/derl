@@ -83,9 +83,11 @@ class StartWithRandomActions(gym.Wrapper):
   def reset(self, **kwargs):
     obs = self.env.reset(**kwargs)
     if self.real_done:
-      num_random_actions = np.random.randint(self.max_random_actions + 1)
+      num_random_actions = self.env.action_space.np_random.randint(
+          self.max_random_actions + 1)
       for _ in range(num_random_actions):
-        obs, _, _, _ = self.env.step(self.env.action_space.sample())
+        action = self.env.action_space.sample()
+        obs, _, _, _ = self.env.step(action)
       self.real_done = False
     return obs
 
