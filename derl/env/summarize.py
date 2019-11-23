@@ -18,7 +18,9 @@ class RewardSummarizer:
 
   def should_add_summaries(self):
     """ Returns `True` if it is time to write summaries. """
-    return np.all(self.had_ended_episodes)
+    return (
+        tf.contrib.summary.should_record_summaries()
+        and np.all(self.had_ended_episodes))
 
   def add_summaries(self):
     """ Writes summaries. """

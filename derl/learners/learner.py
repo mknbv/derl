@@ -72,13 +72,25 @@ class Learner:
     if not 0 <= log_freq <= 1:
       raise ValueError(f"log_freq must be in [0, 1], got {log_freq}")
     log_period = int(len(self.runner) * log_freq)
+    last_record_step = tf.Variable(step - log_period)
 
+    learning_iterator = self.learning_loop()
     with tqdm(total=len(self.runner)) as pbar:
-      with tf.contrib.summary.record_summaries_every_n_global_steps(
-          log_period, global_step=step):
-        for interactions, loss in self.learning_loop():
-          yield interactions, loss
+      while True:
+        summary_context = tf.contrib.summary.never_record_summaries
+        should_record_summaries = step - last_record_step >= log_period
+        old_step = tf.Variable(step)
+        if should_record_summaries:
+          summary_context = tf.contrib.summary.always_record_summaries
+        try:
+          with summary_context():
+            interactions, loss = next(learning_iterator)
+          if should_record_summaries and step > old_step:
+            last_record_step.assign(step)
           pbar.update(int(self.runner.step_var) - pbar.n)
+          yield interactions, loss
+        except StopIteration:
+          break
 
   def learn(self, logdir=None, log_freq=1e-5, save_weights=None):
     """ Performs learning for a specified number of steps. """
