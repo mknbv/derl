@@ -60,12 +60,6 @@ class RewardSummarizer:
       self.episode_lengths.fill(0)
       self.had_ended_episodes.fill(False)
 
-  def reset(self):
-    """ Resets summarization-related statistics. """
-    self.rewards.fill(0)
-    self.episode_lengths.fill(0)
-    self.had_ended_episodes.fill(False)
-
 
 class Summarize(Wrapper):
   """ Writes env summaries."""
@@ -96,5 +90,4 @@ class Summarize(Wrapper):
     return obs, rew, done, info
 
   def reset(self, **kwargs):
-    self.summarizer.reset()
     return self.env.reset(**kwargs)
