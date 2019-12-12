@@ -95,10 +95,14 @@ class NatureDQN(nn.Module):
                input_shape=(84, 84, 4),
                dueling=False,
                nbins=None,
+               qvalues_from_outputs=None,
                init_fn=orthogonal_init):
     super().__init__()
     self.dueling = dueling
     self.nbins = nbins
+    if not qvalues_from_outputs:
+      qvalues_from_outputs = lambda outputs: outputs
+    self.qvalues_from_outputs = qvalues_from_outputs
     self.single_output = not isinstance(output_units, (list, tuple))
     self.output_units = ([output_units] if self.single_output
                          else list(output_units))
@@ -113,7 +117,46 @@ class NatureDQN(nn.Module):
     self.output_layers = nn.ModuleList(
         [nn.Linear(in_units, out_units)
          for out_units in self.output_units])
-    self.apply(init_fn)
+    if init_fn:
+      self.apply(init_fn)
+
+  @classmethod
+  def categorical(cls, output_units,
+                  input_shape=(84, 84, 4),
+                  dueling=False,
+                  nbins=None,
+                  val_range=(-10., 10.),
+                  init_fn=orthogonal_init):
+    """ Categorical distributional model. """
+    if nbins is None:
+      raise ValueError("nbins cannot be None")
+    def qvalues_from_outputs(preds):
+      values = torch.linspace(*val_range, nbins)
+      return torch.sum(values * preds, -1)
+    return cls(output_units,
+               input_shape=input_shape,
+               dueling=dueling,
+               nbins=nbins,
+               qvalues_from_outputs=qvalues_from_outputs,
+               init_fn=init_fn)
+
+  @classmethod
+  def quantile(cls, output_units,
+               input_shape=(84, 84, 4),
+               dueling=False,
+               nbins=None,
+               init_fn=orthogonal_init):
+    """ Quantile distributional model. """
+    if nbins is None:
+      raise ValueError("nbins cannot be None")
+    def qvalues_from_outputs(preds):
+      return torch.mean(preds, -1)
+    return cls(output_units,
+               input_shape=input_shape,
+               dueling=dueling,
+               nbins=nbins,
+               qvalues_from_outputs=qvalues_from_outputs,
+               init_fn=init_fn)
 
   @broadcast_inputs(ndims=4)
   def forward(self, inputs):  # pylint: disable=arguments-differ

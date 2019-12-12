@@ -39,7 +39,6 @@ class NatureDQNForActorCriticTest(TestCase):
     self.assertEqual(nweights, 6)
     self.assertEqual(nbiases, 6)
 
-
   def test_broadcast(self):
     inputs = torch.rand(84, 84, 4)
     outputs = self.dqn(inputs)
@@ -51,7 +50,24 @@ class NatureDQNForActorCriticTest(TestCase):
 class NatureDQNForDistributionalRLTest(TestCase):
   def setUp(self):
     self.dqn = NatureDQN(output_units=6, nbins=51)
+    self.inputs = torch.randn(84, 84, 4)
 
   def test_output_shape(self):
     outputs = self.dqn(torch.rand(32, 84, 84, 4))
     self.assertEqual(outputs.shape, torch.Size([32, 6, 51]))
+
+  def test_categorical(self):
+    dqn = NatureDQN.categorical(output_units=6, nbins=3,
+                                val_range=(-1, 1))
+    outputs = dqn(self.inputs)
+    qvalues = dqn.qvalues_from_outputs(outputs)
+
+    expected = np.sum(outputs.detach().numpy() * np.asarray([-1, 0, 1]), -1)
+    nt.assert_allclose(qvalues.detach().numpy(), expected)
+
+  def test_quantile(self):
+    dqn = NatureDQN.quantile(output_units=4, nbins=3)
+    outputs = dqn(self.inputs)
+    qvalues = dqn.qvalues_from_outputs(outputs)
+    expected = np.mean(outputs.detach().numpy(), -1)
+    nt.assert_allclose(qvalues.detach().numpy(), expected)

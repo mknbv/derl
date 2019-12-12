@@ -52,6 +52,7 @@ class GAE:
       last_value = np.squeeze(last_value, -1)
     gae[-1] += (1 - resets[-1]) * self.gamma * last_value
 
+    # pylint: disable=unsubscriptable-object
     for i in range(gae.shape[0] - 1, 0, -1):
       not_reset = 1 - resets[i - 1]
       next_values = values[i]
