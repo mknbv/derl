@@ -1,3 +1,4 @@
+# pylint: disable=missing-docstring
 from unittest import TestCase
 import numpy as np
 import numpy.testing as nt
@@ -8,7 +9,7 @@ torch.manual_seed(0)
 
 
 class DQNBaseTest(TestCase):
-  def test_call(self):
+  def test_call(self):  # pylint: disable=no-self-use
     inputs = torch.rand(32, 84, 84, 4)
     dqn_base = NatureDQNBase()
     outputs = dqn_base(inputs)

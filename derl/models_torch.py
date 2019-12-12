@@ -1,5 +1,4 @@
 """ PyTorch models for RL. """
-from functools import partial
 from math import floor
 import numpy as np
 import torch
@@ -44,6 +43,9 @@ class NatureDQNBase(nn.Sequential):
   def forward(self, inputs):  # pylint: disable=arguments-differ
     if isinstance(inputs, np.ndarray):
       inputs = torch.from_numpy(inputs)
+    device = next(self.parameters()).device
+    if inputs.device != device:
+      inputs = inputs.to(device)
     if self.permute:
       inputs = inputs.permute(0, 3, 1, 2)
     if inputs.dtype == torch.uint8:
@@ -58,6 +60,13 @@ def init_weights(layer, weight_initializer, bias_initializer):
     weight_initializer(layer.weight)
   if hasattr(layer, "bias"):
     bias_initializer(layer.bias)
+
+
+def orthogonal_init(layer):
+  """ Orthogonal initialization of layers and zero initialization of biases. """
+  return init_weights(layer,
+                      weight_initializer=nn.init.orthogonal_,
+                      bias_initializer=nn.init.zeros_)
 
 
 def broadcast_inputs(ndims):
@@ -86,8 +95,7 @@ class NatureDQN(nn.Module):
                input_shape=(84, 84, 4),
                dueling=False,
                nbins=None,
-               weight_initializer=nn.init.orthogonal_,
-               bias_initializer=nn.init.zeros_):
+               init_fn=orthogonal_init):
     super().__init__()
     self.dueling = dueling
     self.nbins = nbins
@@ -105,9 +113,7 @@ class NatureDQN(nn.Module):
     self.output_layers = nn.ModuleList(
         [nn.Linear(in_units, out_units)
          for out_units in self.output_units])
-    self.apply(partial(init_weights,
-                       weight_initializer=weight_initializer,
-                       bias_initializer=bias_initializer))
+    self.apply(init_fn)
 
   @broadcast_inputs(ndims=4)
   def forward(self, inputs):  # pylint: disable=arguments-differ
