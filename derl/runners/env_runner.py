@@ -1,7 +1,6 @@
 """ Defines environment runner. """
 from abc import abstractmethod
 from collections import defaultdict
-import tensorflow as tf
 from derl.train import StepVariable
 
 
@@ -11,7 +10,7 @@ class EnvRunner:
     self.env = env
     self.policy = policy
     if step_var is None:
-      step_var = StepVariable("env_runner_step", tf.train.create_global_step())
+      step_var = StepVariable("env_runner_step")
     self.step_var = step_var
     self.nsteps = nsteps
     self.horizon = horizon
