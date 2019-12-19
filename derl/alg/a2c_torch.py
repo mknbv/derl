@@ -1,7 +1,7 @@
 """ Implements Actor-Critic algorithm. """
 import torch
 from derl.base_torch import BaseAlgorithm
-import derl.summary_manager as summary_manager
+import derl.summary as summary
 
 
 def r_squared(targets, predictions):
@@ -45,10 +45,13 @@ class A2C(BaseAlgorithm):
     policy_loss = -torch.mean(log_prob * advantages)
     entropy = torch.mean(act["distribution"].entropy())
 
-    if summary_manager.should_record_summaries():
-      summary_manager.add_scalar("a2c/advantages", torch.mean(advantages))
-      summary_manager.add_scalar("a2c/entropy", torch.mean(entropy))
-      summary_manager.add_scalar("a2c/policy_loss", policy_loss)
+    if summary.should_record():
+      summaries = dict(advantages=torch.mean(advantages),
+                       entropy=torch.mean(entropy),
+                       policy_loss=policy_loss)
+      for key, val in summaries.items():
+        summary.add_scalar(f"a2c/{key}", val, global_step=self.step_var)
+
     return policy_loss - self.entropy_coef * entropy
 
   def value_loss(self, trajectory, act=None):
@@ -66,13 +69,13 @@ class A2C(BaseAlgorithm):
 
     value_loss = torch.mean(torch.pow(values - value_targets, 2))
 
-    if summary_manager.should_record_summaries():
-      summary_manager.add_scalar("a2c/value_targets",
-                                 torch.mean(value_targets))
-      summary_manager.add_scalar("a2c/value_preds", torch.mean(values))
-      summary_manager.add_scalar("a2c/value_loss", value_loss)
-      summary_manager.add_scalar("a2c/r_squared",
-                                 r_squared(values, value_targets))
+    if summary.should_record():
+      summaries = dict(value_targets=torch.mean(value_targets),
+                       value_preds=torch.mean(values),
+                       value_loss=value_loss,
+                       r_squared=r_squared(values, value_targets))
+      for key, val in summaries.items():
+        summary.add_scalar(f"a2c/{key}", val, global_step=self.step_var)
 
     return value_loss
 
@@ -81,6 +84,7 @@ class A2C(BaseAlgorithm):
     policy_loss = self.policy_loss(data, act)
     value_loss = self.value_loss(data, act)
     loss = policy_loss + self.value_loss_coef * value_loss
-    if summary_manager.should_record_summaries():
-      summary_manager.add_scalar("a2c/loss", loss)
+    if summary.should_record():
+      summary.add_scalar(f"a2c/loss", loss,
+                         global_step=self.step_var)
     return loss

@@ -4,8 +4,8 @@ Defines base classes.
 from abc import ABC, abstractmethod
 
 import torch
-import derl.summary_manager as summary_manager
 from derl.train_torch import StepVariable
+import derl.summary as summary
 
 
 class BaseAlgorithm(ABC):
@@ -26,9 +26,9 @@ class BaseAlgorithm(ABC):
     if hasattr(self, "max_grad_norm"):
       grad_norm = torch.nn.utils.clip_grad_norm_(
           parameters, getattr(self, "max_grad_norm"))
-      if summary_manager.should_record_summaries():
-        summary_manager.add_scalar(
-            f"{self.__class__.__name__.lower()}/grad_norm", grad_norm)
+      if summary.should_record():
+        summary.add_scalar(f"{self.__class__.__name__.lower()}/grad_norm",
+                           grad_norm, global_step=self.step_var)
 
   def step(self, data):
     """ Performs single training step of the algorithm. """

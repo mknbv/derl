@@ -1,6 +1,6 @@
 """ Utils for training. """
 import torch
-from derl import summary_manager
+import derl.summary as summary
 
 
 _GLOBAL_STEP = None
@@ -38,8 +38,8 @@ class StepVariable:
     self.value += value
     for var, fun, name in self.anneals:
       var.data = fun()
-      if name is not None and summary_manager.should_record_summaries():
-        summary_manager.add_scalar(f"train/{name}", var, global_step=int(self))
+      if name is not None and summary.should_record():
+        summary.add_scalar(f"train/{name}", var, global_step=int(self))
 
   def add_annealing_tensor(self, tensor, function, name=None):
     """ Adds annealing tensor. """
