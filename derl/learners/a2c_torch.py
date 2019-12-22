@@ -8,7 +8,7 @@ from derl.policies_torch import ActorCriticPolicy
 from derl.runners.env_runner import EnvRunner
 from derl.runners.onpolicy import TransformInteractions
 from derl.runners.trajectory_transforms import GAE, MergeTimeBatch
-from derl.train_torch import get_global_step, linear_anneal
+from derl.train_torch import StepVariable, linear_anneal
 
 
 class A2CLearner(Learner):
@@ -43,7 +43,7 @@ class A2CLearner(Learner):
       gae_kwargs["normalize"] = kwargs.get("normalize_gae")
     runner = EnvRunner(env, policy, kwargs["num_runner_steps"],
                        nsteps=kwargs["num_train_steps"],
-                       step_var=get_global_step())
+                       step_var=StepVariable.get_global_step())
     runner = TransformInteractions(
         runner, [GAE(policy, **gae_kwargs), MergeTimeBatch()])
     return runner

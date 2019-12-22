@@ -3,7 +3,7 @@ from collections import deque
 from gym import Wrapper
 import numpy as np
 import derl.summary as summary
-from derl.train_torch import create_global_step
+from derl.train_torch import StepVariable
 
 
 class RewardSummarizer:
@@ -11,7 +11,7 @@ class RewardSummarizer:
   def __init__(self, nenvs, prefix, running_mean_size=100, step_var=None):
     self.prefix = prefix
     if step_var is None:
-      step_var = create_global_step()
+      step_var = StepVariable.create_global_step()
     self.step_var = step_var
     self.had_ended_episodes = np.zeros(nenvs, dtype=np.bool)
     self.rewards = np.zeros(nenvs)
