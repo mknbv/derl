@@ -9,12 +9,15 @@ setup(
     url="https://github.com/MichaelKonobeev/derl/",
     license="MIT",
     packages=["derl"],
-    scripts=["derl/scripts/derl"],
+    scripts=["derl/scripts/derl",
+             "derl/scripts/derl-torch"],
     install_requires=[
         "gym[atari]>=0.11",
         "numpy",
         "opencv-python",
-        "tensorflow-probability>=0.5",
+        "tensorflow-probability==0.5",
+        "tensorboard==1.14",
+        "torch",
         "tqdm",
     ],
     long_description="DERL is a Deep Reinforcement Learning package"
