@@ -78,10 +78,30 @@ class ActorCriticPolicy(Policy):
 
 class EpsilonGreedyPolicy(Policy):
   """ Epsilon greedy policy. """
-  def __init__(self, model, epsilon=0.05, nactions=None):
+  def __init__(self, model, epsilon=0.05, nactions=None,
+               qvalues_from_preds=None):
     self.model = model
     self.epsilon = epsilon
     self.nactions = nactions
+    if qvalues_from_preds is None:
+      qvalues_from_preds = lambda x: x
+    self.qvalues_from_preds = qvalues_from_preds
+
+  @classmethod
+  def categorical(cls, model, epsilon=0.05, nactions=None,
+                  valrange=(-10., 10.)):
+    """ Categorical distributional RL policy. """
+    def qvalues_from_preds(preds):
+      vals = torch.linspace(*valrange, model.nbins)
+      return torch.sum(vals * preds, -1)
+    return cls(model, epsilon, nactions, qvalues_from_preds)
+
+  @classmethod
+  def quantile(cls, model, epsilon=0.05, nactions=None):
+    """ Quantile distributional RL policy. """
+    def qvalues_from_preds(preds):
+      return torch.mean(preds, -1)
+    return cls(model, epsilon, nactions, qvalues_from_preds)
 
   def act(self, inputs, state=None, update_state=True, training=False):
     if state is not None:
@@ -91,12 +111,16 @@ class EpsilonGreedyPolicy(Policy):
     if isinstance(epsilon, (torch.Tensor)):
       epsilon = epsilon.numpy()
     if self.nactions is None:
-      outputs = self.model(inputs)
-      qvalues = self.model.qvalues_from_outputs(outputs)
+      preds = self.model(inputs)
+      qvalues = self.qvalues_from_preds(preds)
       self.nactions = qvalues.shape[-1]
-    if np.random.random() <= epsilon:
+    if not training and np.random.random() <= epsilon:
       return {"actions": np.random.randint(self.nactions)}
 
-    preds = self.model(inputs).detach().numpy()
-    qvalues = _np(self.model.qvalues_from_outputs(torch.from_numpy(preds)))
-    return {"actions": np.argmax(qvalues, -1)}
+    preds = self.model(inputs)
+    if training:
+      return dict(preds=preds)
+
+    qvalues = self.qvalues_from_preds(preds)
+    actions = _np(torch.argmax(qvalues, -1))
+    return dict(actions=actions)
