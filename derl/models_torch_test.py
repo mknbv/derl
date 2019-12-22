@@ -1,24 +1,29 @@
 # pylint: disable=missing-docstring
-from unittest import TestCase
 import numpy as np
 import numpy.testing as nt
 import torch
 from derl.models_torch import NatureDQNBase, NatureDQN
+from derl.torch_test_case import TorchTestCase
 
-torch.manual_seed(0)
 
+class DQNBaseTest(TorchTestCase):
+  def setUp(self):
+    super().setUp()
+    self.dqn_base = NatureDQNBase()
 
-class DQNBaseTest(TestCase):
+  def test_params(self):
+    self.assertEqual(len(list(self.dqn_base.parameters())), 8)
+
   def test_call(self):  # pylint: disable=no-self-use
     inputs = torch.rand(32, 84, 84, 4)
-    dqn_base = NatureDQNBase()
-    outputs = dqn_base(inputs)
+    outputs = self.dqn_base(inputs)
     expected = np.load("testdata/models/dqn-base-outputs.npy")
-    nt.assert_allclose(outputs.detach().numpy(), expected)
+    self.assertAllClose(outputs, expected)
 
 
-class NatureDQNForActorCriticTest(TestCase):
+class NatureDQNForActorCriticTest(TorchTestCase):
   def setUp(self):
+    super().setUp()
     self.dqn = NatureDQN(output_units=(4, 1))
 
   def test_params(self):
@@ -47,7 +52,7 @@ class NatureDQNForActorCriticTest(TestCase):
     self.assertEqual(outputs[1].shape, torch.Size((1,)))
 
 
-class NatureDQNForDistributionalRLTest(TestCase):
+class NatureDQNForDistributionalRLTest(TorchTestCase):
   def test_output_shape(self):
     dqn = NatureDQN(output_units=6, nbins=51)
     outputs = dqn(torch.rand(32, 84, 84, 4))
