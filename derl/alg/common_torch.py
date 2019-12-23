@@ -12,6 +12,11 @@ def r_squared(targets, predictions):
   return 1. - torch.mean(torch.pow(predictions - targets, 2)) / variance
 
 
+def torch_from_numpy(arr, device=None):
+  """ Creates torch.Tensor from numpy array and collocates it with device. """
+  return torch.from_numpy(arr).to(device=device)
+
+
 class BaseAlgorithm(ABC):
   """ Base algorithm. """
   def __init__(self, model, optimizer, step_var=None):
@@ -20,6 +25,7 @@ class BaseAlgorithm(ABC):
     if step_var is None:
       step_var = StepVariable()
     self.step_var = step_var
+    self.device = next(self.model.parameters()).device
 
   @abstractmethod
   def loss(self, data):

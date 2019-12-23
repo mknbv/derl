@@ -1,6 +1,6 @@
 """ Implements Actor-Critic algorithm. """
 import torch
-from derl.alg.common_torch import BaseAlgorithm, r_squared
+from derl.alg.common_torch import BaseAlgorithm, r_squared, torch_from_numpy
 import derl.summary as summary
 
 
@@ -18,7 +18,6 @@ class A2C(BaseAlgorithm):
                step_var=None):
     super().__init__(model=policy.model, optimizer=optimizer, step_var=step_var)
     self.policy = policy
-    self.device = next(self.model.parameters()).device
     self.value_loss_coef = value_loss_coef
     self.entropy_coef = entropy_coef
     self.max_grad_norm = max_grad_norm
@@ -28,8 +27,8 @@ class A2C(BaseAlgorithm):
     if act is None:
       act = self.policy.act(trajectory, training=True)
     log_prob = act["distribution"].log_prob(
-        torch.from_numpy(trajectory["actions"]).to(self.device))
-    advantages = torch.from_numpy(trajectory["advantages"]).to(self.device)
+        torch_from_numpy(trajectory["actions"], self.device))
+    advantages = torch_from_numpy(trajectory["advantages"], self.device)
 
     if log_prob.shape != advantages.shape:
       raise ValueError("trajectory has mismatched shapes: "
@@ -53,8 +52,7 @@ class A2C(BaseAlgorithm):
     if act is None:
       act = self.policy.act(trajectory, training=True)
     values = act["values"]
-    value_targets = torch.from_numpy(
-        trajectory["value_targets"]).to(self.device)
+    value_targets = torch_from_numpy(trajectory["value_targets"], self.device)
 
     if values.shape != value_targets.shape:
       raise ValueError("trajectory has mismatched shapes "
