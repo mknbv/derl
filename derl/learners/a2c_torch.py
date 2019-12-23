@@ -1,5 +1,4 @@
 """ Advantage Actor-Critic Learner. """
-import torch
 from torch.optim import RMSprop
 from derl.alg.a2c_torch import A2C
 from derl.learners.learner_torch import Learner
@@ -36,7 +35,6 @@ class A2CLearner(Learner):
   def make_runner(env, model=None, **kwargs):
     if model is None:
       model = NatureDQN(output_units=(env.action_space.n, 1))
-    model.to("cuda" if torch.cuda.is_available() else "cpu")
     policy = ActorCriticPolicy(model)
     gae_kwargs = {k: kwargs[k] for k in ("gamma", "lambda_") if k in kwargs}
     if "normalize_gae" in kwargs:

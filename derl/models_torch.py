@@ -115,6 +115,7 @@ class NatureDQN(nn.Module):
          for out_units in self.output_units])
     if init_fn:
       self.apply(init_fn)
+    self.to("cuda" if torch.cuda.is_available() else "cpu")
 
   @broadcast_inputs(ndims=4)
   def forward(self, inputs):  # pylint: disable=arguments-differ
