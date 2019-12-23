@@ -5,12 +5,14 @@ import tensorflow as tf
 import derl
 from derl.env.make_env_torch import make as make_env
 from derl.learners.a2c_torch import A2CLearner
+from derl.learners.ppo_torch import PPOLearner
 
 
 def get_learners():
   """ Returns learner name to learner class mapping. """
   return {
-    "a2c": A2CLearner
+    "a2c": A2CLearner,
+    "ppo": PPOLearner
   }
 
 
