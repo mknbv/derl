@@ -31,7 +31,7 @@ class Summary:
   def __init__(self, module):
     self.module = module
     self.writer = None
-    self.should_record = const(False)
+    self.should_record = const(True)
     self.set_writer_functions()
 
   def start_recording(self):
