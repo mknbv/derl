@@ -1,11 +1,15 @@
-"""
-Defines base classes.
-"""
+""" Defines algorithm base class and various utils. """
 from abc import ABC, abstractmethod
 
 import torch
 from derl.train_torch import StepVariable
 import derl.summary as summary
+
+
+def r_squared(targets, predictions):
+  """ Computes coefficient of determination. """
+  variance = torch.pow(predictions.std(), 2)
+  return 1. - torch.mean(torch.pow(predictions - targets, 2)) / variance
 
 
 class BaseAlgorithm(ABC):

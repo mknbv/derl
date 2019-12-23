@@ -1,13 +1,7 @@
 """ Implements Actor-Critic algorithm. """
 import torch
-from derl.base_torch import BaseAlgorithm
+from derl.alg.common_torch import BaseAlgorithm, r_squared
 import derl.summary as summary
-
-
-def r_squared(targets, predictions):
-  """ Computes coefficient of determination. """
-  variance = torch.pow(predictions.std(), 2)
-  return 1. - torch.mean(torch.pow(predictions - targets, 2)) / variance
 
 
 class A2C(BaseAlgorithm):
