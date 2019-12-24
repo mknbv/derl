@@ -4,8 +4,8 @@ from argparse import ArgumentParser
 import tensorflow as tf
 import derl
 from derl.env.make_env_torch import make as make_env
-from derl.learners.a2c_torch import A2CLearner
-from derl.learners.ppo_torch import PPOLearner
+from derl.learners_torch.a2c import A2CLearner
+from derl.learners_torch.ppo import PPOLearner
 
 
 def get_learners():

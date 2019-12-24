@@ -1,9 +1,9 @@
 """ Implements PPO Learner. """
 from torch.optim import Adam
-from derl.learners.learner_torch import Learner
+from derl.learners_torch.learner import Learner
 from derl.models_torch import NatureDQN
 from derl.policies_torch import ActorCriticPolicy
-from derl.alg.ppo_torch import PPO
+from derl.alg_torch.ppo import PPO
 from derl.runners.onpolicy import make_ppo_runner
 from derl.train_torch import StepVariable, linear_anneal
 

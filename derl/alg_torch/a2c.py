@@ -1,6 +1,6 @@
 """ Implements Actor-Critic algorithm. """
 import torch
-from derl.alg.common_torch import BaseAlgorithm, r_squared, torch_from_numpy
+from derl.alg_torch.common import BaseAlgorithm, r_squared, torch_from_numpy
 import derl.summary as summary
 
 

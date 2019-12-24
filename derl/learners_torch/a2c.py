@@ -1,7 +1,7 @@
 """ Advantage Actor-Critic Learner. """
 from torch.optim import RMSprop
-from derl.alg.a2c_torch import A2C
-from derl.learners.learner_torch import Learner
+from derl.alg_torch.a2c import A2C
+from derl.learners_torch.learner import Learner
 from derl.models_torch import NatureDQN
 from derl.policies_torch import ActorCriticPolicy
 from derl.runners.env_runner import EnvRunner
