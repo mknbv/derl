@@ -74,7 +74,13 @@ def linear_anneal(name, start_value, nsteps, step_var, end_value=0.):
   var = torch.tensor(start_value)  # pylint: disable=not-callable
   step_var.add_annealing_tensor(
       var,
-      lambda: torch.tensor(  # pylint: disable=not-callable
-          start_value + int(step_var) / nsteps * (end_value - start_value)),
+      lambda: torch.clamp(
+          torch.tensor(  # pylint: disable=not-callable
+              start_value
+              + int(step_var) / nsteps * (end_value - start_value)
+          ),
+          min(start_value, end_value),
+          max(start_value, end_value)
+      ),
       name)
   return var
