@@ -17,6 +17,14 @@ def torch_from_numpy(arr, device=None):
   return torch.from_numpy(arr).to(device=device)
 
 
+def total_norm(tensors, norm_type=2):
+  """ Computes total norm of the tensors as if concatenated into 1 vector. """
+  if norm_type == float('inf'):
+    return max(t.abs().max() for t in tensors)
+  return sum(t.norm(norm_type) ** norm_type
+             for t in tensors) ** (1. / norm_type)
+
+
 class BaseAlgorithm(ABC):
   """ Base algorithm. """
   def __init__(self, model, optimizer, step_var=None):
@@ -33,12 +41,15 @@ class BaseAlgorithm(ABC):
 
   def preprocess_gradients(self, parameters):
     """ Applies gradient preprocessing. """
+    grad_norm = None
     if hasattr(self, "max_grad_norm"):
       grad_norm = torch.nn.utils.clip_grad_norm_(
           parameters, getattr(self, "max_grad_norm"))
-      if summary.should_record():
-        summary.add_scalar(f"{self.__class__.__name__.lower()}/grad_norm",
-                           grad_norm, global_step=self.step_var)
+    if summary.should_record():
+      if grad_norm is None:
+        grad_norm = total_norm(p.grad for p in parameters if p.grad is not None)
+      summary.add_scalar(f"{self.__class__.__name__.lower()}/grad_norm",
+                         grad_norm, global_step=self.step_var)
 
   def step(self, data):
     """ Performs single training step of the algorithm. """
