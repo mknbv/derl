@@ -1,9 +1,26 @@
 # pylint: disable=missing-docstring
+from unittest import skipUnless
 import numpy as np
 import numpy.testing as nt
 import torch
-from derl.models_torch import NatureDQNBase, NatureDQN
+from derl.models_torch import NoisyLinear, NatureDQNBase, NatureDQN
 from derl.torch_test_case import TorchTestCase
+
+
+class NoisyLinearTest(TorchTestCase):
+  def test_parameters(self):
+    layer = NoisyLinear(3, 4)
+    self.assertEqual(len(list(layer.parameters())), 4)
+
+  def test_call(self):
+    layer = NoisyLinear(3, 4)
+    self.assertEqual(layer(torch.randn(2, 3)).shape, (2, 4))
+
+  @skipUnless(torch.cuda.is_available(), "Requires cuda")
+  def test_cuda_call(self):
+    layer = NoisyLinear(3, 4)
+    layer.to("cuda")
+    self.assertEqual(layer(torch.randn(2, 3).to("cuda")).shape, (2, 4))
 
 
 class DQNBaseTest(TorchTestCase):
@@ -13,6 +30,10 @@ class DQNBaseTest(TorchTestCase):
 
   def test_params(self):
     self.assertEqual(len(list(self.dqn_base.parameters())), 8)
+
+  def test_noisy_params(self):
+    base = NatureDQNBase(noisy=True)
+    self.assertEqual(len(list(base.parameters())), 10)
 
   def test_call(self):  # pylint: disable=no-self-use
     inputs = torch.rand(32, 84, 84, 4)

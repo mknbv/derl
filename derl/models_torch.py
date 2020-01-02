@@ -5,6 +5,52 @@ import torch
 import torch.nn as nn
 
 
+class NoisyLinear(nn.Module):
+  """ Noisy linear transformation on top of regular linear layer. """
+  def __init__(self, in_features, out_features,
+               stddev=0.5, factorized=True):
+    super().__init__()
+    self.linear = nn.Linear(in_features, out_features)
+    self.stddev = stddev
+    self.factorized = factorized
+    self.weight = nn.Parameter(
+        torch.Tensor(out_features, in_features))
+    self.bias = nn.Parameter(torch.Tensor(out_features))
+    self.reset_parameters()
+
+  def reset_parameters(self):
+    """ Reinitializes parameters of the layer. """
+    self.linear.reset_parameters()
+    nn.init.kaiming_uniform_(self.weight, a=np.sqrt(5))
+    fan_in = self.weight.shape[1]
+    bound = 1 / np.sqrt(fan_in)
+    nn.init.uniform_(self.bias, -bound, bound)
+
+  def sample_noise(self):
+    """ Samples noise for forward method. """
+    out_features, in_features = self.weight.shape
+    if not self.factorized:
+      weight_noise = torch.normal(0., self.stddev,
+                                  size=(out_features, in_features))
+      bias_noise = torch.normal(0., self.stddev, size=(out_features,))
+      return weight_noise, bias_noise
+
+    output_noise = torch.normal(0., self.stddev, size=(out_features,))
+    input_noise = torch.normal(0., self.stddev, size=(in_features,))
+    weight_noise = output_noise[:, None] * input_noise[None]
+    bias_noise = output_noise
+    return weight_noise, bias_noise
+
+  def forward(self, inputs):  # pylint: disable=arguments-differ
+    weight_noise, bias_noise = self.sample_noise()
+    weight_noise = weight_noise.to(self.weight.device)
+    bias_noise = bias_noise.to(self.bias.device)
+    noisy_weight = self.weight * weight_noise
+    noisy_bias = self.bias * bias_noise
+    return (self.linear.forward(inputs)
+            + nn.functional.linear(inputs, noisy_weight, noisy_bias))
+
+
 def conv2d_output_shape(height, width, conv2d):
   """ Computes output shape of given conv2d layer. """
   padding, stride = conv2d.padding, conv2d.stride
@@ -20,7 +66,7 @@ def conv2d_output_shape(height, width, conv2d):
 
 class NatureDQNBase(nn.Sequential):
   """ Hidden layers of the Nature DQN model. """
-  def __init__(self, input_shape=(84, 84, 4), permute=True):
+  def __init__(self, input_shape=(84, 84, 4), permute=True, noisy=False):
     super().__init__()
     self.permute = permute
     in_channels, height, width = input_shape
@@ -38,7 +84,8 @@ class NatureDQNBase(nn.Sequential):
 
     self.add_module("flatten", nn.Flatten())
     in_features = height * width * convolutions[-1].out_channels
-    self.add_module("linear", nn.Linear(in_features, 512))
+    linear_class = NoisyLinear if noisy else nn.Linear
+    self.add_module("linear", linear_class(in_features, 512))
 
   def forward(self, inputs):  # pylint: disable=arguments-differ
     if isinstance(inputs, np.ndarray):
@@ -93,6 +140,7 @@ class NatureDQN(nn.Module):
   def __init__(self,
                output_units,
                input_shape=(84, 84, 4),
+               noisy=False,
                dueling=False,
                nbins=None,
                init_fn=orthogonal_init):
@@ -108,10 +156,11 @@ class NatureDQN(nn.Module):
     if dueling:
       self.output_units.append(nbins or 1)
 
-    self.base = NatureDQNBase(input_shape)
+    self.base = NatureDQNBase(input_shape, noisy=noisy)
     in_units = list(self.base.children())[-1].out_features
+    linear_class = NoisyLinear if noisy else nn.Linear
     self.output_layers = nn.ModuleList(
-        [nn.Linear(in_units, out_units)
+        [linear_class(in_units, out_units)
          for out_units in self.output_units])
     if init_fn:
       self.apply(init_fn)
