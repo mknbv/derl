@@ -32,7 +32,7 @@ def main():
   kwargs = vars(args)
   env = make_env(args.env_id, kwargs.get("nenvs"), kwargs.get("seed"))
   learner = learner_class.make_with_args(env, args)
-  learner.learn(args.logdir, args.log_period)
+  learner.learn(args.logdir, args.log_freq)
 
 
 if __name__ == "__main__":
