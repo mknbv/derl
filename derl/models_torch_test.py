@@ -11,15 +11,16 @@ class DQNBaseTest(TorchTestCase):
   def setUp(self):
     super().setUp()
     self.dqn_base = NatureCNNBase()
+    self.dqn_base.load_state_dict(torch.load("testdata/models/dqn-base.pt"))
 
   def test_params(self):
     self.assertEqual(len(list(self.dqn_base.parameters())), 8)
 
-  def test_call(self):  # pylint: disable=no-self-use
+  def test_call(self):
     inputs = torch.rand(32, 84, 84, 4)
     outputs = self.dqn_base(inputs)
     expected = np.load("testdata/models/dqn-base-outputs.npy")
-    self.assertAllClose(outputs, expected)
+    self.assertAllClose(outputs, expected, atol=1e-6)
 
 
 def assert_orthogonal(arr):
@@ -36,6 +37,7 @@ class NatureCNNForActorCriticTest(TorchTestCase):
   def setUp(self):
     super().setUp()
     self.dqn = NatureCNNModule(output_units=(4, 1))
+    self.dqn.to("cpu")
 
   def test_params(self):
     nweights = nbiases = 0
@@ -67,6 +69,7 @@ class NatureCNNForDistributionalRLTest(TorchTestCase):
 class MuJoCoModuleTest(TorchTestCase):
   def test_params(self):
     module = MuJoCoModule(4, 5)
+    module.to("cpu")
     nweights = nbiases = 0
     for submodule in module.modules():
       if hasattr(submodule, "bias"):
@@ -90,7 +93,7 @@ class MuJoCoModuleTest(TorchTestCase):
     mean, std, values = outputs
     self.assertEqual(mean.shape, (2, 5))
     self.assertEqual(std.shape, (2, 5))
-    nt.assert_equal(std.detach().numpy(), 1.)
+    nt.assert_equal(std.cpu().detach().numpy(), 1.)
     self.assertEqual(values.shape, (2, 1))
 
   def test_broadcast(self):

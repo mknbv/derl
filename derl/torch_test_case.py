@@ -9,7 +9,7 @@ import torch
 def _np(tensor):
   """ Converts tensor to numpy array. """
   if isinstance(tensor, torch.Tensor):
-    return tensor.detach().numpy()
+    return tensor.cpu().detach().numpy()
   return tensor
 
 
