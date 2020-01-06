@@ -1,4 +1,5 @@
 """ PyTorch models for RL. """
+from itertools import chain, tee
 from math import floor
 import numpy as np
 import torch
@@ -126,11 +127,64 @@ class NatureDQN(nn.Module):
       outputs[0] = torch.reshape(outputs[0], (-1, nactions, self.nbins))
     if self.dueling:
       advantages, values = outputs[0], outputs.pop()
-      values = torch.reshape(values,
-                             (-1, 1, self.nbins) if self.nbins is not None
-                             else (-1, 1))
+      values = torch.reshape(
+          values, (-1, 1, self.nbins) if self.nbins is not None else (-1, 1))
       outputs[0] = (values + advantages
                     - torch.mean(advantages, 1, keepdims=True))
     if self.single_output:
       outputs = outputs[0]
     return outputs
+
+
+def pairwise(iterable):
+  """ s -> (s0,s1), (s1,s2), (s2, s3), ... """
+  it1, it2 = tee(iterable)
+  next(it2, None)
+  return zip(it1, it2)
+
+
+class MLP(nn.Sequential):
+  """ Multi-layer perceptron. """
+  def __init__(self,
+               in_features,
+               out_features,
+               hidden_features=(64, 64),
+               activation=nn.Tanh):
+    layers = list(chain.from_iterable(
+        (nn.Linear(nin, nout), activation())
+        for nin, nout in pairwise(chain(
+            (in_features,), hidden_features, (out_features,)))
+    ))
+    layers.pop()  # Remove redundant activation after last layer.
+    super().__init__(*layers)
+
+
+class MuJoCoModule(nn.Module):
+  """ MuJoCo model. """
+  def __init__(self, in_features,
+               output_units,
+               mlp=MLP,
+               init_fn=orthogonal_init):
+    super().__init__()
+    if not isinstance(output_units, (tuple, list)):
+      output_units = [output_units]
+    self.module_list = nn.ModuleList()
+    for nunits in output_units:
+      self.module_list.append(mlp(in_features, nunits))
+    if init_fn is not None:
+      self.apply(init_fn)
+    self.logstd = nn.Parameter(torch.zeros(output_units[0]))
+    self.to("cuda" if torch.cuda.is_available() else "cpu")
+
+  @broadcast_inputs(ndims=2)
+  def forward(self, inputs):  # pylint: disable=arguments-differ
+    if isinstance(inputs, np.ndarray):
+      inputs = torch.from_numpy(inputs)
+    device = next(self.parameters()).device
+    if inputs.device != device:
+      inputs = inputs.to(device)
+
+    logits, *outputs = (module(inputs) for module in self.module_list)
+    batch_size = inputs.shape[0]
+    std = torch.repeat_interleave(torch.exp(self.logstd)[None], batch_size, 0)
+    return (logits, std, *outputs)

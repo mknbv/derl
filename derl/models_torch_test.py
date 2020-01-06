@@ -1,8 +1,9 @@
 # pylint: disable=missing-docstring
+from collections import Iterable
 import numpy as np
 import numpy.testing as nt
 import torch
-from derl.models_torch import NatureDQNBase, NatureDQN
+from derl.models_torch import NatureDQNBase, NatureDQN, MuJoCoModule
 from derl.torch_test_case import TorchTestCase
 
 
@@ -21,6 +22,16 @@ class DQNBaseTest(TorchTestCase):
     self.assertAllClose(outputs, expected)
 
 
+def assert_orthogonal(arr):
+  """ Checks that np.ndarray has orthogonal initialization. """
+  arr = np.reshape(arr, (arr.shape[0], -1))
+  nrows, ncols = arr.shape
+  if nrows > ncols:
+    nt.assert_allclose(arr.T @ arr, np.eye(ncols), atol=1e-6)
+  else:
+    nt.assert_allclose(arr @ arr.T, np.eye(nrows), atol=1e-6)
+
+
 class NatureDQNForActorCriticTest(TorchTestCase):
   def setUp(self):
     super().setUp()
@@ -33,13 +44,7 @@ class NatureDQNForActorCriticTest(TorchTestCase):
         nt.assert_equal(module.bias.detach().numpy(), 0.)
         nbiases += 1
       if hasattr(module, "weight"):
-        weight = module.weight.detach().numpy()
-        weight = np.reshape(weight, (weight.shape[0], -1))
-        nrows, ncols = weight.shape
-        if nrows > ncols:
-          nt.assert_allclose(weight.T @ weight, np.eye(ncols), atol=1e-6)
-        else:
-          nt.assert_allclose(weight @ weight.T, np.eye(nrows), atol=1e-6)
+        assert_orthogonal(module.weight.detach().numpy())
         nweights += 1
     self.assertEqual(nweights, 6)
     self.assertEqual(nbiases, 6)
@@ -57,3 +62,41 @@ class NatureDQNForDistributionalRLTest(TorchTestCase):
     dqn = NatureDQN(output_units=6, nbins=51)
     outputs = dqn(torch.rand(32, 84, 84, 4))
     self.assertEqual(outputs.shape, torch.Size([32, 6, 51]))
+
+
+class MuJoCoModuleTest(TorchTestCase):
+  def test_params(self):
+    module = MuJoCoModule(4, 5)
+    nweights = nbiases = 0
+    for submodule in module.modules():
+      if hasattr(submodule, "bias"):
+        nt.assert_equal(submodule.bias.detach().numpy(), 0.)
+        nbiases += 1
+      if hasattr(submodule, "weight"):
+        assert_orthogonal(submodule.weight.detach().numpy())
+        nweights += 1
+    self.assertEqual(nweights, 3)
+    self.assertEqual(nbiases, 3)
+
+    # The module should also contain 1 logstd parameter
+    self.assertEqual(len(list(module.parameters())), 6 + 1)
+
+  def test_call(self):
+    module = MuJoCoModule(4, (5, 1))
+    outputs = module(torch.rand(2, 4))
+    self.assertIsInstance(outputs, Iterable)
+    self.assertEqual(len(outputs), 3)
+
+    mean, std, values = outputs
+    self.assertEqual(mean.shape, (2, 5))
+    self.assertEqual(std.shape, (2, 5))
+    nt.assert_equal(std.detach().numpy(), 1.)
+    self.assertEqual(values.shape, (2, 1))
+
+  def test_broadcast(self):
+    module = MuJoCoModule(3, 5)
+    outputs = module(torch.rand(3))
+    self.assertIsInstance(outputs, Iterable)
+    self.assertEqual(len(outputs), 2)
+    self.assertEqual(outputs[0].shape, (5,))
+    self.assertEqual(outputs[1].shape, (5,))
