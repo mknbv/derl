@@ -33,7 +33,11 @@ class BaseAlgorithm(ABC):
     if step_var is None:
       step_var = StepVariable()
     self.step_var = step_var
-    self.device = next(self.model.parameters()).device
+
+  @property
+  def device(self):
+    """ Returns device of the inner model. """
+    return next(self.model.parameters()).device
 
   @abstractmethod
   def loss(self, data):
