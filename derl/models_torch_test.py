@@ -100,3 +100,9 @@ class MuJoCoModuleTest(TorchTestCase):
     self.assertEqual(len(outputs), 2)
     self.assertEqual(outputs[0].shape, (5,))
     self.assertEqual(outputs[1].shape, (5,))
+
+  def test_dtype(self):
+    module = MuJoCoModule(3, 5)
+    outputs = module(torch.rand(3).double())
+    self.assertEqual(outputs[0].shape, (5,))
+    self.assertEqual(outputs[1].shape, (5,))

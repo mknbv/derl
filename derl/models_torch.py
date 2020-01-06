@@ -183,8 +183,9 @@ class MuJoCoModule(nn.Module):
     if isinstance(inputs, np.ndarray):
       inputs = torch.from_numpy(inputs)
     device = next(self.parameters()).device
-    if inputs.device != device:
-      inputs = inputs.to(device)
+    dtype = next(self.parameters()).dtype
+    if inputs.device != device or inputs.dtype != dtype:
+      inputs = inputs.to(device, dtype)
     inputs = inputs.reshape((inputs.shape[0], -1))
 
     logits, *outputs = (module(inputs) for module in self.module_list)
