@@ -5,7 +5,7 @@ from derl.learners_torch.ppo import PPOLearner
 from derl.learners_torch.learner_test import LearnerTestCase
 
 
-class PPOLearnerTest(LearnerTestCase):
+class PPOLearnerAtariTest(LearnerTestCase):
   def setUp(self):
     super().setUp()
 
@@ -26,3 +26,28 @@ class PPOLearnerTest(LearnerTestCase):
 
   def test_losses(self):
     self.assert_losses("testdata/ppo/atari/losses.npy", rtol=1e-5, atol=1e-5)
+
+
+class PPOLearnerPyBulletTest(LearnerTestCase):
+  def setUp(self):
+    super().setUp()
+
+    kwargs = PPOLearner.get_kwargs("mujoco")
+    # Modify some hyper parameters in order for the test not to take to long
+    kwargs["num_runner_steps"] = 12
+    kwargs["num_minibatches"] = 2
+    kwargs["num_epochs"] = 3
+    self.env = make_env("HalfCheetahBulletEnv-v0",
+                        nenvs=kwargs.get("nenvs"), seed=0)
+    self.learner = PPOLearner.make_with_kwargs(self.env, **kwargs)
+    self.learner.model.to("cpu")
+
+  def test_interactions(self):
+    self.assert_interactions("testdata/ppo/pybullet/interactions.npz",
+                             rtol=1e-5, atol=1e-5)
+
+  def test_grad(self):
+    self.assert_grad("testdata/ppo/pybullet/grads.npz", rtol=1e-5, atol=1e-5)
+
+  def test_losses(self):
+    self.assert_losses("testdata/ppo/pybullet/losses.npy", rtol=1e-5, atol=1e-5)
