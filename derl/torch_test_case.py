@@ -21,7 +21,8 @@ class TorchTestCase(TestCase):
     random.seed(0)
     np.random.seed(0)
 
-  def assertAllClose(self, actual, expected):  # pylint: disable=invalid-name
+  # pylint: disable=invalid-name
+  def assertAllClose(self, actual, expected, rtol=1e-7, atol=0.):
     """ Checks that actual and expected arrays or torch tensors are equal. """
     # pylint: disable=no-self-use
-    nt.assert_allclose(_np(actual), _np(expected))
+    nt.assert_allclose(_np(actual), _np(expected), rtol=rtol, atol=atol)
