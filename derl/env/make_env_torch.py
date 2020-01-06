@@ -1,5 +1,10 @@
 """ Creates environments with standard wrappers. """
 import gym
+try:
+  # Populates gym registry with pybullet envs
+  import pybullet_envs   # pylint: disable=unused-import
+except ImportError:
+  pass  # pylint: disable=bare-except
 from atari_py import list_games
 from .atari_wrappers import (
     EpisodicLife,
@@ -54,6 +59,8 @@ def is_atari_id(env_id):
 def is_mujoco_id(env_id):
   """ Returns True if env_id corresponds to MuJoCo env. """
   env_id = "".join(env_id.split("-")[:-1])
+  if env_id.endswith("BulletEnv"):
+    env_id = env_id[:-len("BulletEnv")]
   mujoco_ids = set(list_envs("mujoco"))
   return env_id in mujoco_ids
 
