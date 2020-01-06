@@ -1,16 +1,16 @@
 # pylint: disable=missing-docstring
-from collections import Iterable
+import collections
 import numpy as np
 import numpy.testing as nt
 import torch
-from derl.models_torch import NatureDQNBase, NatureDQN, MuJoCoModule
+from derl.models_torch import NatureCNNBase, NatureCNNModule, MuJoCoModule
 from derl.torch_test_case import TorchTestCase
 
 
 class DQNBaseTest(TorchTestCase):
   def setUp(self):
     super().setUp()
-    self.dqn_base = NatureDQNBase()
+    self.dqn_base = NatureCNNBase()
 
   def test_params(self):
     self.assertEqual(len(list(self.dqn_base.parameters())), 8)
@@ -32,10 +32,10 @@ def assert_orthogonal(arr):
     nt.assert_allclose(arr @ arr.T, np.eye(nrows), atol=1e-6)
 
 
-class NatureDQNForActorCriticTest(TorchTestCase):
+class NatureCNNForActorCriticTest(TorchTestCase):
   def setUp(self):
     super().setUp()
-    self.dqn = NatureDQN(output_units=(4, 1))
+    self.dqn = NatureCNNModule(output_units=(4, 1))
 
   def test_params(self):
     nweights = nbiases = 0
@@ -57,9 +57,9 @@ class NatureDQNForActorCriticTest(TorchTestCase):
     self.assertEqual(outputs[1].shape, torch.Size((1,)))
 
 
-class NatureDQNForDistributionalRLTest(TorchTestCase):
+class NatureCNNForDistributionalRLTest(TorchTestCase):
   def test_output_shape(self):
-    dqn = NatureDQN(output_units=6, nbins=51)
+    dqn = NatureCNNModule(output_units=6, nbins=51)
     outputs = dqn(torch.rand(32, 84, 84, 4))
     self.assertEqual(outputs.shape, torch.Size([32, 6, 51]))
 
@@ -84,7 +84,7 @@ class MuJoCoModuleTest(TorchTestCase):
   def test_call(self):
     module = MuJoCoModule(4, (5, 1))
     outputs = module(torch.rand(2, 4))
-    self.assertIsInstance(outputs, Iterable)
+    self.assertIsInstance(outputs, collections.Iterable)
     self.assertEqual(len(outputs), 3)
 
     mean, std, values = outputs
@@ -96,7 +96,7 @@ class MuJoCoModuleTest(TorchTestCase):
   def test_broadcast(self):
     module = MuJoCoModule(3, 5)
     outputs = module(torch.rand(3))
-    self.assertIsInstance(outputs, Iterable)
+    self.assertIsInstance(outputs, collections.Iterable)
     self.assertEqual(len(outputs), 2)
     self.assertEqual(outputs[0].shape, (5,))
     self.assertEqual(outputs[1].shape, (5,))

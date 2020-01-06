@@ -1,7 +1,7 @@
 """ Implements PPO Learner. """
 from torch.optim import Adam
 from derl.learners_torch.learner import Learner
-from derl.models_torch import NatureDQN
+from derl.models_torch import make_module
 from derl.policies_torch import ActorCriticPolicy
 from derl.alg_torch.ppo import PPO
 from derl.runners.onpolicy import make_ppo_runner
@@ -50,7 +50,7 @@ class PPOLearner(Learner):
   @staticmethod
   def make_runner(env, model=None, **kwargs):
     model = (model if model is not None
-             else NatureDQN((env.action_space.n, 1)))
+             else make_module(env.observation_space, env.action_space, 1))
     policy = ActorCriticPolicy(model)
     runner_kwargs = {key: kwargs[key] for key in
                      ["gamma", "lambda_", "num_epochs", "num_minibatches"]

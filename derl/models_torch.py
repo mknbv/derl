@@ -1,9 +1,11 @@
 """ PyTorch models for RL. """
 from itertools import chain, tee
 from math import floor
+import gym
 import numpy as np
 import torch
 import torch.nn as nn
+from derl.env.env_batch import SpaceBatch
 
 
 def conv2d_output_shape(height, width, conv2d):
@@ -19,7 +21,7 @@ def conv2d_output_shape(height, width, conv2d):
   return out_height, out_width
 
 
-class NatureDQNBase(nn.Sequential):
+class NatureCNNBase(nn.Sequential):
   """ Hidden layers of the Nature DQN model. """
   def __init__(self, input_shape=(84, 84, 4), permute=True):
     super().__init__()
@@ -89,7 +91,7 @@ def broadcast_inputs(ndims):
   return decorator
 
 
-class NatureDQN(nn.Module):
+class NatureCNNModule(nn.Module):
   """ Nature DQN model that supports subsequently proposed modifications. """
   def __init__(self,
                output_units,
@@ -109,7 +111,7 @@ class NatureDQN(nn.Module):
     if dueling:
       self.output_units.append(nbins or 1)
 
-    self.base = NatureDQNBase(input_shape)
+    self.base = NatureCNNBase(input_shape)
     in_units = list(self.base.children())[-1].out_features
     self.output_layers = nn.ModuleList(
         [nn.Linear(in_units, out_units)
@@ -161,7 +163,7 @@ class MLP(nn.Sequential):
 
 class MuJoCoModule(nn.Module):
   """ MuJoCo model. """
-  def __init__(self, in_features,
+  def __init__(self, input_shape,
                output_units,
                mlp=MLP,
                init_fn=orthogonal_init):
@@ -170,7 +172,7 @@ class MuJoCoModule(nn.Module):
       output_units = [output_units]
     self.module_list = nn.ModuleList()
     for nunits in output_units:
-      self.module_list.append(mlp(in_features, nunits))
+      self.module_list.append(mlp(np.prod(input_shape), nunits))
     if init_fn is not None:
       self.apply(init_fn)
     self.logstd = nn.Parameter(torch.zeros(output_units[0]))
@@ -183,8 +185,31 @@ class MuJoCoModule(nn.Module):
     device = next(self.parameters()).device
     if inputs.device != device:
       inputs = inputs.to(device)
+    inputs = inputs.reshape((inputs.shape[0], -1))
 
     logits, *outputs = (module(inputs) for module in self.module_list)
     batch_size = inputs.shape[0]
     std = torch.repeat_interleave(torch.exp(self.logstd)[None], batch_size, 0)
     return (logits, std, *outputs)
+
+
+def make_module(observation_space, action_space, other_outputs=None, **kwargs):
+  """ Creates default model for given observation and action spaces. """
+  if isinstance(other_outputs, int) or other_outputs is None:
+    other_outputs = [other_outputs] if other_outputs is not None else []
+
+  if isinstance(action_space, SpaceBatch):
+    action_space = action_space.spaces[0]
+  if isinstance(action_space, gym.spaces.Discrete):
+    output_units = [action_space.n, *other_outputs]
+    return NatureCNNModule(input_shape=observation_space.shape,
+                           output_units=output_units, **kwargs)
+  if isinstance(action_space, gym.spaces.Box):
+    if len(action_space.shape) != 1:
+      raise ValueError("when action space is an instance of gym.spaces.Box "
+                       "it should have a single dimension, got "
+                       f"len(action_space.shape) = {len(action_space.shape)}")
+    output_units = [action_space.shape[0], *other_outputs]
+    return MuJoCoModule(input_shape=observation_space.shape,
+                        output_units=output_units, **kwargs)
+  raise ValueError(f"unsupported action space {action_space}")

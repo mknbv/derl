@@ -1,14 +1,14 @@
 # pylint: disable=missing-docstring
 import numpy as np
 import torch
-from derl.models_torch import NatureDQN
+from derl.models_torch import NatureCNNModule
 from derl.policies_torch import ActorCriticPolicy, EpsilonGreedyPolicy
 from derl.torch_test_case import TorchTestCase
 
 
 class ActorCriticPolicyTest(TorchTestCase):
   def test_categorical(self):
-    model = NatureDQN((6, 1))
+    model = NatureCNNModule((6, 1))
     policy = ActorCriticPolicy(model)
     act = policy.act(torch.rand(84, 84, 4))
     self.assertEqual(list(act.keys()), ["actions", "log_prob", "values"])
@@ -24,16 +24,16 @@ class EpsilonGreedyPolicyTest(TorchTestCase):
     self.assertEqual(act["actions"], expected)
 
   def test_categorical_model(self):
-    model = NatureDQN(8, nbins=10)
+    model = NatureCNNModule(8, nbins=10)
     policy = EpsilonGreedyPolicy.categorical(model, epsilon=0)
     self.act_check(policy, np.array(5))
 
   def test_quantile_model(self):
-    model = NatureDQN(8, nbins=10)
+    model = NatureCNNModule(8, nbins=10)
     policy = EpsilonGreedyPolicy.quantile(model, epsilon=0)
     self.act_check(policy, np.array(5))
 
   def test_dqn(self):
-    model = NatureDQN(12)
+    model = NatureCNNModule(12)
     policy = EpsilonGreedyPolicy(model)
     self.act_check(policy, np.array(2))
