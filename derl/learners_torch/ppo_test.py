@@ -14,17 +14,15 @@ class PPOLearnerTest(LearnerTestCase):
                         nenvs=kwargs.get("nenvs"), seed=0)
     self.learner = PPOLearner.make_with_kwargs(self.env, **kwargs)
     self.learner.model.load_state_dict(
-        torch.load("testdata/ppo-torch-atari/model.pt"))
+        torch.load("testdata/ppo/atari/model.pt"))
     self.learner.model.to("cpu")
 
   def test_interactions(self):
-    self.assert_interactions("testdata/ppo-torch-atari/interactions.npz",
+    self.assert_interactions("testdata/ppo/atari/interactions.npz",
                              rtol=1e-6, atol=1e-6)
 
   def test_grad(self):
-    self.assert_grad("testdata/ppo-torch-atari/grads.npz",
-                     rtol=1e-6, atol=1e-6)
+    self.assert_grad("testdata/ppo/atari/grads.npz", rtol=1e-6, atol=1e-6)
 
   def test_losses(self):
-    self.assert_losses("testdata/ppo-torch-atari/losses.npy",
-                       rtol=1e-5, atol=1e-5)
+    self.assert_losses("testdata/ppo/atari/losses.npy", rtol=1e-5, atol=1e-5)
