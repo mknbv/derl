@@ -48,8 +48,8 @@ def log_args(args, logdir=None):
   return args
 
 
-def get_args_from_defaults(defaults, env_id=True,
-                           logdir=True, log_freq=1e-5, call_log_args=None):
+def get_args_from_defaults(defaults, env_id=True, logdir=True,
+                           log_freq=1e-5, call_log_args=None):
   """ Returns parsed arguments. """
   if call_log_args and not logdir:
     raise ValueError("logdir must be True when call_log_args is True")
