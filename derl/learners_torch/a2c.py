@@ -37,13 +37,14 @@ class A2CLearner(Learner):
       model = make_module(env.observation_space, env.action_space, 1)
     policy = ActorCriticPolicy(model)
     gae_kwargs = {k: kwargs[k] for k in ("gamma", "lambda_") if k in kwargs}
-    if "normalize_gae" in kwargs:
-      gae_kwargs["normalize"] = kwargs.get("normalize_gae")
+    gae_kwargs["normalize"] = kwargs.get("normalize_gae", False)
     runner = EnvRunner(env, policy, kwargs["num_runner_steps"],
                        nsteps=kwargs["num_train_steps"],
                        step_var=StepVariable.get_global_step())
-    runner = TransformInteractions(
-        runner, [GAE(policy, **gae_kwargs), MergeTimeBatch()])
+    transforms = [GAE(policy, **gae_kwargs)]
+    if hasattr(env.unwrapped, "nenvs"):
+      transforms.append(MergeTimeBatch())
+    runner = TransformInteractions(runner, transforms)
     return runner
 
 
