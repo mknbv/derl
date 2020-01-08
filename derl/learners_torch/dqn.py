@@ -15,7 +15,7 @@ class DQNLearner(Learner):
   def get_parser_defaults(cls, env_type="atari"):
     return {
         "atari": {
-            "num-train-steps": int(200e6),
+            "num-train-steps": 200e6,
             "no-dueling": dict(action="store_false", dest="dueling"),
             "exploration-epsilon-start": 1.,
             "exploration-epsilon-end": 0.01,
@@ -33,7 +33,7 @@ class DQNLearner(Learner):
             "optimizer-momentum": 0.,
             "optimizer-epsilon": 0.01,
             "gamma": 0.99,
-            "target-update-period": int(40e3),
+            "target-update-period": int(10e3),
             "no-double": dict(action="store_false", dest="double"),
         },
     }.get(env_type)

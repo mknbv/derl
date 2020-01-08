@@ -5,9 +5,9 @@ from derl.alg_torch.common import BaseAlgorithm, r_squared, torch_from_numpy
 import derl.summary as summary
 
 
-class TargetUpdator:
+class TargetUpdater:
   """ Provides interface for updating target model with a given period. """
-  def __init__(self, model, target, step_var, period=40_000):
+  def __init__(self, model, target, step_var, period=10_000):
     self.model = model
     self.target = target
     self.period = period
@@ -42,14 +42,14 @@ class DQN(BaseAlgorithm):
   def __init__(self, model, target_model,
                optimizer=None,
                gamma=0.99,
-               target_update_period=40_000,
+               target_update_period=10_000,
                double=True,
                step_var=None):
     super().__init__(model, optimizer, step_var)
     self.target_model = target_model
     self.gamma = gamma
     self.double = double
-    self.target_updator = TargetUpdator(model, target_model,
+    self.target_updater = TargetUpdater(model, target_model,
                                         self.step_var, target_update_period)
 
   def make_predictions(self, observations, actions=None):
@@ -114,6 +114,6 @@ class DQN(BaseAlgorithm):
     return loss
 
   def step(self, data):
-    if self.target_updator.should_update():
-      self.target_updator.update()
+    if self.target_updater.should_update():
+      self.target_updater.update()
     super().step(data)
