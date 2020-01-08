@@ -84,7 +84,7 @@ class DQN(BaseAlgorithm):
     if tuple(targets.shape) != target_shape:
       raise ValueError("making predictions when computing targets gives bad "
                        f"shape {tuple(targets.shape)}, expected shape "
-                       f"{target_shape}")
+                       f"{tuple(target_shape)}")
 
     for t in reversed(range(nsteps)):
       targets = rewards[:, t] + (1 - resets[:, t]) * self.gamma * targets
