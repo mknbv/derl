@@ -3,7 +3,7 @@ import collections
 import numpy as np
 import numpy.testing as nt
 import torch
-from derl.models_torch import NatureCNNBase, NatureCNNModule, MuJoCoModule
+from derl.models_torch import NatureCNNBase, NatureCNNModel, MuJoCoModel
 from derl.torch_test_case import TorchTestCase
 
 
@@ -36,7 +36,7 @@ def assert_orthogonal(arr):
 class NatureCNNForActorCriticTest(TorchTestCase):
   def setUp(self):
     super().setUp()
-    self.dqn = NatureCNNModule(output_units=(4, 1))
+    self.dqn = NatureCNNModel(output_units=(4, 1))
     self.dqn.to("cpu")
 
   def test_params(self):
@@ -61,32 +61,32 @@ class NatureCNNForActorCriticTest(TorchTestCase):
 
 class NatureCNNForDistributionalRLTest(TorchTestCase):
   def test_output_shape(self):
-    dqn = NatureCNNModule(output_units=6, nbins=51)
+    dqn = NatureCNNModel(output_units=6, nbins=51)
     outputs = dqn(torch.rand(32, 84, 84, 4))
     self.assertEqual(outputs.shape, torch.Size([32, 6, 51]))
 
 
-class MuJoCoModuleTest(TorchTestCase):
+class MuJoCoModelTest(TorchTestCase):
   def test_params(self):
-    module = MuJoCoModule(4, 5)
-    module.to("cpu")
+    model = MuJoCoModel(4, 5)
+    model.to("cpu")
     nweights = nbiases = 0
-    for submodule in module.modules():
-      if hasattr(submodule, "bias"):
-        nt.assert_equal(submodule.bias.detach().numpy(), 0.)
+    for module in model.modules():
+      if hasattr(module, "bias"):
+        nt.assert_equal(module.bias.detach().numpy(), 0.)
         nbiases += 1
-      if hasattr(submodule, "weight"):
-        assert_orthogonal(submodule.weight.detach().numpy())
+      if hasattr(module, "weight"):
+        assert_orthogonal(module.weight.detach().numpy())
         nweights += 1
     self.assertEqual(nweights, 3)
     self.assertEqual(nbiases, 3)
 
-    # The module should also contain 1 logstd parameter
-    self.assertEqual(len(list(module.parameters())), 6 + 1)
+    # The model should also contain 1 logstd parameter
+    self.assertEqual(len(list(model.parameters())), 6 + 1)
 
   def test_call(self):
-    module = MuJoCoModule(4, (5, 1))
-    outputs = module(torch.rand(2, 4))
+    model = MuJoCoModel(4, (5, 1))
+    outputs = model(torch.rand(2, 4))
     self.assertIsInstance(outputs, collections.Iterable)
     self.assertEqual(len(outputs), 3)
 
@@ -97,15 +97,15 @@ class MuJoCoModuleTest(TorchTestCase):
     self.assertEqual(values.shape, (2, 1))
 
   def test_broadcast(self):
-    module = MuJoCoModule(3, 5)
-    outputs = module(torch.rand(3))
+    model = MuJoCoModel(3, 5)
+    outputs = model(torch.rand(3))
     self.assertIsInstance(outputs, collections.Iterable)
     self.assertEqual(len(outputs), 2)
     self.assertEqual(outputs[0].shape, (5,))
     self.assertEqual(outputs[1].shape, (5,))
 
   def test_dtype(self):
-    module = MuJoCoModule(3, 5)
-    outputs = module(torch.rand(3).double())
+    model = MuJoCoModel(3, 5)
+    outputs = model(torch.rand(3).double())
     self.assertEqual(outputs[0].shape, (5,))
     self.assertEqual(outputs[1].shape, (5,))

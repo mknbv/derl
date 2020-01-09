@@ -2,7 +2,7 @@
 from torch.optim import RMSprop
 from derl.alg_torch.a2c import A2C
 from derl.learners_torch.learner import Learner
-from derl.models_torch import make_module
+from derl.models_torch import make_model
 from derl.policies_torch import ActorCriticPolicy
 from derl.runners.env_runner import EnvRunner
 from derl.runners.onpolicy import TransformInteractions
@@ -34,7 +34,7 @@ class A2CLearner(Learner):
   @staticmethod
   def make_runner(env, model=None, **kwargs):
     if model is None:
-      model = make_module(env.observation_space, env.action_space, 1)
+      model = make_model(env.observation_space, env.action_space, 1)
     policy = ActorCriticPolicy(model)
     gae_kwargs = {k: kwargs[k] for k in ("gamma", "lambda_") if k in kwargs}
     gae_kwargs["normalize"] = kwargs.get("normalize_gae", False)
