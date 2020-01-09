@@ -39,8 +39,7 @@ class DQN(BaseAlgorithm):
   https://web.stanford.edu/class/psych209/Readings/MnihEtAlHassibis15NatureControlDeepRL.pdf).
   """
   # pylint: disable=too-many-arguments
-  def __init__(self, model, target_model,
-               optimizer=None,
+  def __init__(self, model, target_model, optimizer,
                gamma=0.99,
                target_update_period=10_000,
                double=True,
