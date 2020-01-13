@@ -17,6 +17,7 @@ class DQNLearner(Learner):
         "atari": {
             "num-train-steps": 200e6,
             "no-dueling": dict(action="store_false", dest="dueling"),
+            "noisy": dict(action="store_true"),
             "exploration-epsilon-start": 1.,
             "exploration-epsilon-end": 0.01,
             "exploration-end-step": int(1e6),
@@ -48,12 +49,15 @@ class DQNLearner(Learner):
   @staticmethod
   def make_runner(env, model=None, **kwargs):
     model = model or DQNLearner.make_model(
-        env, dueling=kwargs.get("dueling", True))
+        env, noisy=kwargs.get("noisy", False),
+        dueling=kwargs.get("dueling", True))
     step_var = StepVariable.get_global_step()
-    epsilon = linear_anneal(
-        "exploration_epsilon", kwargs["exploration_epsilon_start"],
-        kwargs["exploration_end_step"], step_var,
-        kwargs["exploration_epsilon_end"])
+    epsilon = 0.
+    if not kwargs.get("noisy", False):
+      epsilon = linear_anneal(
+          "exploration_epsilon", kwargs["exploration_epsilon_start"],
+          kwargs["exploration_end_step"], step_var,
+          kwargs["exploration_epsilon_end"])
     policy = EpsilonGreedyPolicy(model, epsilon)
     runner_kwargs = {k: kwargs[k] for k in ("storage_size", "storage_init_size",
                                             "batch_size", "steps_per_sample",
