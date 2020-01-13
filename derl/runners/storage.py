@@ -82,6 +82,9 @@ class InteractionStorage:
 
   def sample(self, size):
     """ Returns random sample of interactions of specified size. """
+    # Always sample by nstep less indices than available first,
+    # then rearrange the indices such that 'next_observations' is
+    # taken correctly.
     indices = np.random.randint(self.index - self.nstep if not self.is_full
                                 else self.capacity - self.nstep, size=size)
     nosample_index = (self.index + self.capacity - self.nstep) % self.capacity
