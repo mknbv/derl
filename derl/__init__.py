@@ -1,6 +1,6 @@
 """ All derl imports. """
 from . import train, env
-from .base import BaseAlgorithm
+from .alg import *
 from .learners import *
 from .runners import *
 from .models import (
@@ -12,11 +12,6 @@ from .models import (
     make_model
 )
 from .policies import Policy, ActorCriticPolicy, EpsilonGreedyPolicy
-from .alg import (
-    A2C,
-    DQN,
-    PPO,
-)
 from .scripts import (
     get_simple_parser,
     get_defaults_parser,
