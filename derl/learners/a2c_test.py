@@ -1,8 +1,8 @@
 # pylint: disable=missing-docstring
 import torch
-from derl.env.make_env_torch import make as make_env
-from derl.learners_torch.a2c import A2CLearner
-from derl.learners_torch.learner_test import LearnerTestCase
+from derl.env.make_env import make as make_env
+from derl.learners.a2c import A2CLearner
+from derl.learners.learner_test import LearnerTestCase
 
 
 class A2CLearnerTest(LearnerTestCase):

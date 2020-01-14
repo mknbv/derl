@@ -2,7 +2,7 @@
 from abc import ABC, abstractmethod
 
 import torch
-from derl.train_torch import StepVariable
+from derl.train import StepVariable
 import derl.summary as summary
 
 

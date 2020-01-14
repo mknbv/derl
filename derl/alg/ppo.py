@@ -1,10 +1,8 @@
-"""
-Implements Proximal Policy Optimization algorithm.
-"""
-import tensorflow as tf
+""" Implements Proximal Policy Optimization algorithm.  """
+import torch
 
-from derl.base import BaseAlgorithm
-from derl.common import r_squared, reduce_add_summary
+from derl.alg.common import BaseAlgorithm, r_squared, torch_from_numpy
+import derl.summary as summary
 
 
 class PPO(BaseAlgorithm):
@@ -35,9 +33,9 @@ class PPO(BaseAlgorithm):
     if "advantages" not in trajectory:
       raise ValueError("trajectory does not contain 'advantages'")
 
-    old_log_prob = trajectory["log_prob"]
-    advantages = trajectory["advantages"]
-    actions = trajectory["actions"]
+    old_log_prob = torch_from_numpy(trajectory["log_prob"], self.device)
+    advantages = torch_from_numpy(trajectory["advantages"], self.device)
+    actions = torch_from_numpy(trajectory["actions"], self.device)
 
     log_prob = act["distribution"].log_prob(actions)
     if log_prob.shape != old_log_prob.shape:
@@ -49,20 +47,24 @@ class PPO(BaseAlgorithm):
                        f"log_prob.shape={log_prob.shape} "
                        f"advantages.shape={advantages.shape}")
 
-    ratio = tf.exp(log_prob - old_log_prob)
+    ratio = torch.exp(log_prob - old_log_prob)
     policy_loss = -ratio * advantages
     if self.cliprange is not None:
-      ratio_clipped = tf.clip_by_value(ratio, 1. - self.cliprange,
-                                       1. + self.cliprange)
+      ratio_clipped = torch.clamp(ratio, 1. - self.cliprange,
+                                  1. + self.cliprange)
       policy_loss_clipped = -ratio_clipped * advantages
-      policy_loss = tf.maximum(policy_loss, policy_loss_clipped)
+      policy_loss = torch.max(policy_loss, policy_loss_clipped)
 
-    policy_loss = tf.reduce_mean(policy_loss)
-    entropy = tf.reduce_mean(act["distribution"].entropy())
-    reduce_add_summary("ppo/advantages", advantages, step=self.step_var)
-    tf.contrib.summary.scalar("ppo/policy_loss", policy_loss,
-                              step=self.step_var)
-    tf.contrib.summary.scalar("ppo/entropy", entropy, step=self.step_var)
+    policy_loss = torch.mean(policy_loss)
+    entropy = torch.mean(act["distribution"].entropy())
+
+    if summary.should_record():
+      summaries = dict(advantages=torch.mean(advantages),
+                       policy_loss=policy_loss,
+                       entropy=entropy)
+      for key, val in summaries.items():
+        summary.add_scalar(f"ppo/{key}", val, global_step=self.step_var)
+
     return policy_loss - self.entropy_coef * entropy
 
   def value_loss(self, trajectory, act=None):
@@ -72,8 +74,8 @@ class PPO(BaseAlgorithm):
     if "value_targets" not in trajectory:
       raise ValueError("trajectory does not contain 'value_targets'")
 
-    value_targets = trajectory["value_targets"]
-    old_value_preds = trajectory["values"]
+    value_targets = torch_from_numpy(trajectory["value_targets"], self.device)
+    old_value_preds = torch_from_numpy(trajectory["values"], self.device)
     values = act["values"]
 
     if values.shape != value_targets.shape:
@@ -81,20 +83,22 @@ class PPO(BaseAlgorithm):
                        f"values.shape={values.shape} "
                        f"value_targets.shape={value_targets.shape}")
 
-    value_loss = tf.square(values - value_targets)
+    value_loss = torch.pow(values - value_targets, 2)
     if self.cliprange is not None:
-      values_clipped = old_value_preds + tf.clip_by_value(
+      values_clipped = old_value_preds + torch.clamp(
           values - old_value_preds, -self.cliprange, self.cliprange)
-      value_loss_clipped = tf.square(values_clipped - value_targets)
-      value_loss = tf.maximum(value_loss, value_loss_clipped)
+      value_loss_clipped = torch.pow(values_clipped - value_targets, 2)
+      value_loss = torch.max(value_loss, value_loss_clipped)
 
-    value_loss = tf.reduce_mean(value_loss)
-    tf.contrib.summary.scalar("ppo/value_loss", value_loss, step=self.step_var)
-    reduce_add_summary("ppo/value_targets", value_targets, step=self.step_var)
-    reduce_add_summary("ppo/value_preds", values, step=self.step_var)
-    tf.contrib.summary.scalar("ppo/r_squared", r_squared(value_targets, values),
-                              step=self.step_var)
-    value_loss = tf.reduce_mean(value_loss)
+    value_loss = torch.mean(value_loss)
+    if summary.should_record():
+      summaries = dict(value_loss=value_loss,
+                       value_targets=torch.mean(value_targets),
+                       value_preds=torch.mean(values),
+                       r_squared=r_squared(value_targets, values))
+      for key, val in summaries.items():
+        summary.add_scalar(f"ppo/{key}", val, global_step=self.step_var)
+    value_loss = torch.mean(value_loss)
     return value_loss
 
   def loss(self, data):
@@ -103,5 +107,6 @@ class PPO(BaseAlgorithm):
     policy_loss = self.policy_loss(data, act)
     value_loss = self.value_loss(data, act)
     loss = policy_loss + self.value_loss_coef * value_loss
-    tf.contrib.summary.scalar("ppo/loss", loss, step=self.step_var)
+    if summary.should_record():
+      summary.add_scalar("ppo/loss", loss, global_step=self.step_var)
     return loss

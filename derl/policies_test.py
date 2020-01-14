@@ -1,8 +1,8 @@
 # pylint: disable=missing-docstring
 import numpy as np
 import torch
-from derl.models_torch import NatureCNNModel, MuJoCoModel
-from derl.policies_torch import ActorCriticPolicy, EpsilonGreedyPolicy
+from derl.models import NatureCNNModel, MuJoCoModel
+from derl.policies import ActorCriticPolicy, EpsilonGreedyPolicy
 from derl.torch_test_case import TorchTestCase
 
 

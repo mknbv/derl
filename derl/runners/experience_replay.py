@@ -4,7 +4,7 @@ import numpy as np
 from derl.runners.env_runner import EnvRunner, RunnerWrapper
 from derl.runners.onpolicy import TransformInteractions
 from derl.runners.storage import InteractionStorage, PrioritizedStorage
-from derl.train_torch import linear_anneal
+from derl.train import linear_anneal
 
 
 class ExperienceReplay(RunnerWrapper):

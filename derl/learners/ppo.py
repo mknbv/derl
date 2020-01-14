@@ -1,11 +1,11 @@
 """ Implements PPO Learner. """
-import tensorflow as tf
+from torch.optim import Adam
 from derl.learners.learner import Learner
 from derl.models import make_model
 from derl.policies import ActorCriticPolicy
 from derl.alg.ppo import PPO
 from derl.runners.onpolicy import make_ppo_runner
-from derl.train import linear_anneal
+from derl.train import StepVariable, linear_anneal
 
 
 class PPOLearner(Learner):
@@ -18,7 +18,6 @@ class PPOLearner(Learner):
             "num-train-steps": 10e6,
             "nenvs": 8,
             "num-runner-steps": 128,
-            "noisy": dict(action="store_true"),
             "gamma": 0.99,
             "lambda_": 0.95,
             "num-epochs": 3,
@@ -34,7 +33,6 @@ class PPOLearner(Learner):
             "num-train-steps": 1e6,
             "nenvs": dict(type=int, default=None),
             "num-runner-steps": 2048,
-            "noisy": dict(action="store_true"),
             "gamma": 0.99,
             "lambda_": 0.95,
             "num-epochs": 10,
@@ -52,25 +50,26 @@ class PPOLearner(Learner):
   @staticmethod
   def make_runner(env, model=None, **kwargs):
     model = (model if model is not None
-             else make_model(env.observation_space, env.action_space, 1,
-                             noisy=kwargs.get("noisy", False)))
+             else make_model(env.observation_space, env.action_space, 1))
     policy = ActorCriticPolicy(model)
     runner_kwargs = {key: kwargs[key] for key in
                      ["gamma", "lambda_", "num_epochs", "num_minibatches"]
                      if key in kwargs}
     runner = make_ppo_runner(env, policy, kwargs["num_runner_steps"],
-                             kwargs["num_train_steps"], **runner_kwargs)
+                             kwargs["num_train_steps"],
+                             step_var=StepVariable.get_global_step(),
+                             **runner_kwargs)
     return runner
 
   @staticmethod
   def make_alg(runner, **kwargs):
     lr = linear_anneal("lr", kwargs["lr"], kwargs["num_train_steps"],
                        step_var=runner.step_var)
+    params = runner.policy.model.parameters()
     if "optimizer_epsilon" in kwargs:
-      optimizer = tf.train.AdamOptimizer(
-          lr, epsilon=kwargs["optimizer_epsilon"])
+      optimizer = Adam(params, lr, eps=kwargs["optimizer_epsilon"])
     else:
-      optimizer = tf.train.AdamOptimizer(lr)
+      optimizer = Adam(params, lr)
 
     ppo_kwargs = {key: kwargs[key]
                   for key in ["value_loss_coef", "entropy_coef",

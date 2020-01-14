@@ -1,53 +1,68 @@
-""" Helpers for training models. """
-import tensorflow as tf
+""" Utils for training. """
+import torch
+import derl.summary as summary
+
+
+_GLOBAL_STEP = None
 
 
 class StepVariable:
-  """ Wrapper for scalar non-trainable tf.Variable used for step count. """
-  def __init__(self, name, value=0, auto_update=True):
-    if not isinstance(value, (int, tf.Variable)):
-      raise TypeError("value must be of type int or tf.Variable, "
-                      f"but has type {type(value)}")
-    if isinstance(value, tf.Variable):
-      if value.shape != tuple() or value.dtype != tf.int64:
-        raise ValueError("if of type tf.Variable, value must be scalar "
-                         f"and have dtype tf.int64, got shape {value.shape}"
-                         f" and dtype {value.dtype} instead")
-      self.variable = value
-    else:
-      self.variable = tf.Variable(value, dtype=tf.int64,
-                                  trainable=False, name=name)
-    self.auto_update = auto_update
+  """ Step variable. """
+  _global_step = None
+
+  def __init__(self, value=0):
+    self.value = value
     self.anneals = []
 
+  @classmethod
+  def _check_global_step(cls, should_exist):
+    if should_exist and cls._global_step is None:
+      raise ValueError("global step does not exist, create it by calling "
+                       "create_global_step")
+    if not should_exist and cls._global_step is not None:
+      raise ValueError(f"global step already exists: {_GLOBAL_STEP}")
+
+  @classmethod
+  def create_global_step(cls, value=0):
+    """ Creates and returns global step variable. """
+    cls._check_global_step(should_exist=False)
+    cls._global_step = StepVariable(value)
+    return cls._global_step
+
+  @classmethod
+  def get_global_step(cls):
+    """ Returns global step variable. """
+    cls._check_global_step(True)
+    return cls._global_step
+
+  @classmethod
+  def get_or_create_global_step(cls):
+    """ Returns global step which is created if it does already not exist. """
+    if cls._global_step is not None:
+      return cls._global_step
+    return cls.create_global_step()
+
+  @classmethod
+  def unset_global_step(cls):
+    """ Removes global step variable. """
+    step = cls._global_step
+    cls._global_step = None
+    return step
+
   def __int__(self):
-    return int(self.variable)
+    return self.value
 
-  def convert_to_tensor(self, dtype=None, name=None, as_ref=None):
-    """ Converts the step variable to tf.Tensor. """
-    _ = name
-    if dtype == self.variable.dtype:
-      return self.variable if as_ref else self.variable.value()
-    return NotImplemented
+  def assign_add(self, value):
+    """ Updates the step variable by incrementing it by value. """
+    self.value += value
+    for var, fun, name in self.anneals:
+      var.data = fun()
+      if name is not None and summary.should_record():
+        summary.add_scalar(f"train/{name}", var, global_step=int(self))
 
-  def assign_add(self, delta):
-    """ Updates the step variable by incrementing it by delta. """
-    newstep = self.variable.assign_add(delta)
-    for var, fun in self.anneals:
-      var.assign(fun())
-      tf.contrib.summary.scalar(f"train/{var.name[:var.name.rfind(':')]}",
-                                var, step=self)
-    return newstep
-
-  def add_annealing_variable(self, variable, function):
-    """ Adds variable that will be annealed after changes in the step. """
-    self.anneals.append((variable, function))
-
-
-tf.register_tensor_conversion_function(
-    StepVariable,
-    lambda value, *args, **kwargs: value.convert_to_tensor(*args, **kwargs)
-)
+  def add_annealing_tensor(self, tensor, function, name=None):
+    """ Adds annealing tensor. """
+    self.anneals.append((tensor, function, name))
 
 
 def linear_anneal(name, start_value, nsteps, step_var, end_value=0.):
@@ -56,9 +71,16 @@ def linear_anneal(name, start_value, nsteps, step_var, end_value=0.):
     raise TypeError("step_var must be an instance of StepVariable, "
                     f"got {type(step_var)} instead")
 
-  var = tf.Variable(start_value, trainable=False, name=name)
-  step_var.add_annealing_variable(
+  var = torch.tensor(start_value)  # pylint: disable=not-callable
+  step_var.add_annealing_tensor(
       var,
-      tf.train.polynomial_decay(start_value, step_var.variable,
-                                nsteps, end_value))
+      lambda: torch.clamp(
+          torch.tensor(  # pylint: disable=not-callable
+              start_value
+              + int(step_var) / nsteps * (end_value - start_value)
+          ),
+          min(start_value, end_value),
+          max(start_value, end_value)
+      ),
+      name)
   return var

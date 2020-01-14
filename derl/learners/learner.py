@@ -1,10 +1,10 @@
 """ Defines a generic learner. """
 import os
-import tensorflow as tf
 from tqdm import tqdm
 
-from derl.train import StepVariable
+import torch
 from derl.scripts.parsers import get_defaults_parser
+import derl.summary as summary
 
 
 class Learner:
@@ -62,35 +62,17 @@ class Learner:
       raise ValueError("learn method is not supported when runner.step_var "
                        "does not auto-update")
 
-    if logdir is not None:
-      summary_writer = tf.contrib.summary.create_file_writer(logdir)
-      summary_writer.set_as_default()
-    step = self.runner.step_var
-    if isinstance(step, StepVariable):
-      step = step.variable
-
     if not 0 <= log_freq <= 1:
       raise ValueError(f"log_freq must be in [0, 1], got {log_freq}")
-    log_period = int(len(self.runner) * log_freq)
-    last_record_step = tf.Variable(step - log_period)
+    if logdir is not None:
+      log_period = int(len(self.runner) * log_freq)
+      summary.make_writer(logdir)
+      summary.record_with_period(log_period, self.runner.step_var)
 
-    learning_iterator = self.learning_loop()
     with tqdm(total=len(self.runner), disable=disable_tqdm) as pbar:
-      while True:
-        summary_context = tf.contrib.summary.never_record_summaries
-        should_record_summaries = step - last_record_step >= log_period
-        old_step = tf.Variable(step)
-        if should_record_summaries:
-          summary_context = tf.contrib.summary.always_record_summaries
-        try:
-          with summary_context():
-            step_result = next(learning_iterator)
-          if should_record_summaries and step > old_step:
-            last_record_step.assign(step)
-          pbar.update(int(self.runner.step_var) - pbar.n)
-          yield step_result
-        except StopIteration:
-          break
+      for interactions, loss in self.learning_loop():
+        pbar.update(int(self.runner.step_var) - pbar.n)
+        yield interactions, loss
 
   def learn(self, logdir=None, log_freq=1e-5, save_weights=None):
     """ Performs learning for a specified number of steps. """
@@ -103,4 +85,4 @@ class Learner:
       pass
 
     if save_weights:
-      self.model.save_weights(os.path.join(logdir, "model"))
+      torch.save(self.model.state_dict(), os.path.join(logdir, "model"))

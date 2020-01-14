@@ -1,8 +1,8 @@
 # pylint: disable=missing-docstring
 import torch
-from derl.env.make_env_torch import make as make_env
-from derl.learners_torch.ppo import PPOLearner
-from derl.learners_torch.learner_test import LearnerTestCase
+from derl.env.make_env import make as make_env
+from derl.learners.ppo import PPOLearner
+from derl.learners.learner_test import LearnerTestCase
 
 
 class PPOLearnerAtariTest(LearnerTestCase):

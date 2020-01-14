@@ -2,13 +2,16 @@
 from collections import deque
 from gym import Wrapper
 import numpy as np
-import tensorflow as tf
+import derl.summary as summary
+from derl.train import StepVariable
 
 
 class RewardSummarizer:
   """ Summarizes rewards received from environment. """
   def __init__(self, nenvs, prefix, running_mean_size=100, step_var=None):
     self.prefix = prefix
+    if step_var is None:
+      step_var = StepVariable.create_global_step()
     self.step_var = step_var
     self.had_ended_episodes = np.zeros(nenvs, dtype=np.bool)
     self.rewards = np.zeros(nenvs)
@@ -18,33 +21,21 @@ class RewardSummarizer:
 
   def should_add_summaries(self):
     """ Returns `True` if it is time to write summaries. """
-    return (
-        tf.contrib.summary.should_record_summaries()
-        and np.all(self.had_ended_episodes))
+    return summary.should_record() and np.all(self.had_ended_episodes)
 
   def add_summaries(self):
     """ Writes summaries. """
-    tf.contrib.summary.scalar(
-        f"{self.prefix}/total_reward",
-        tf.reduce_mean([q[-1] for q in self.reward_queues]),
-        step=self.step_var)
-    tf.contrib.summary.scalar(
-        f"{self.prefix}/reward_mean_{self.reward_queues[0].maxlen}",
-        tf.reduce_mean([np.mean(q) for q in self.reward_queues]),
-        step=self.step_var)
-    tf.contrib.summary.scalar(
-        f"{self.prefix}/episode_length",
-        tf.reduce_mean(self.episode_lengths),
-        step=self.step_var)
-    if self.had_ended_episodes.size > 1:
-      tf.contrib.summary.scalar(
-          f"{self.prefix}/min_reward",
-          min(q[-1] for q in self.reward_queues),
-          step=self.step_var)
-      tf.contrib.summary.scalar(
-          f"{self.prefix}/max_reward",
-          max(q[-1] for q in self.reward_queues),
-          step=self.step_var)
+    summaries = dict(
+        total_reward=np.mean([q[-1] for q in self.reward_queues]),
+        episode_length=np.mean(self.episode_lengths),
+        min_reward=min(q[-1] for q in self.reward_queues),
+        max_reward=max(q[-1] for q in self.reward_queues),
+    )
+    summaries[f"reward_mean_{self.reward_queues[0].maxlen}"] = (
+        np.mean([np.mean(q) for q in self.reward_queues]))
+
+    for key, val in summaries.items():
+      summary.add_scalar(f"{self.prefix}/{key}", val, global_step=self.step_var)
 
   def step(self, rewards, resets):
     """ Takes statistics from last env step and tries to add summaries.  """

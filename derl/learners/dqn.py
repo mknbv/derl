@@ -1,8 +1,9 @@
 """ Implements Deep Q-Learning Learner. """
-import tensorflow as tf
+from copy import deepcopy
+from torch.optim import RMSprop
 from derl.alg.dqn import DQN
 from derl.learners.learner import Learner
-from derl.models import NatureDQNModel
+from derl.models import NatureCNNModel
 from derl.policies import EpsilonGreedyPolicy
 from derl.runners.experience_replay import make_dqn_runner
 from derl.train import StepVariable, linear_anneal
@@ -14,8 +15,9 @@ class DQNLearner(Learner):
   def get_parser_defaults(cls, env_type="atari"):
     return {
         "atari": {
-            "num-train-steps": int(200e6),
+            "num-train-steps": 200e6,
             "no-dueling": dict(action="store_false", dest="dueling"),
+            "noisy": dict(action="store_true"),
             "exploration-epsilon-start": 1.,
             "exploration-epsilon-end": 0.01,
             "exploration-end-step": int(1e6),
@@ -31,30 +33,31 @@ class DQNLearner(Learner):
             "optimizer-decay": 0.95,
             "optimizer-momentum": 0.,
             "optimizer-epsilon": 0.01,
-            "gamma": .99,
-            "target-update-period": int(40e3),
+            "gamma": 0.99,
+            "target-update-period": int(10e3),
             "no-double": dict(action="store_false", dest="double"),
         },
     }.get(env_type)
 
   @staticmethod
-  def make_model(env, init=None, **kwargs):
+  def make_model(env, init_fn=None, **kwargs):
     """ Creates Nature-DQN model for a given env. """
-    if init is None:
-      init = dict(kernel_initializer=tf.initializers.he_uniform(),
-                  bias_initializer=tf.initializers.he_uniform())
-    return NatureDQNModel(input_shape=env.observation_space.shape,
-                          output_units=env.action_space.n, **init, **kwargs)
+    return NatureCNNModel(input_shape=env.observation_space.shape,
+                          output_units=env.action_space.n,
+                          init_fn=init_fn, **kwargs)
 
   @staticmethod
   def make_runner(env, model=None, **kwargs):
     model = model or DQNLearner.make_model(
-        env, dueling=kwargs.get("dueling", True))
-    step_var = StepVariable("global_step", tf.train.create_global_step())
-    epsilon = linear_anneal(
-        "exploration_epsilon", kwargs["exploration_epsilon_start"],
-        kwargs["exploration_end_step"], step_var,
-        kwargs["exploration_epsilon_end"])
+        env, noisy=kwargs.get("noisy", False),
+        dueling=kwargs.get("dueling", True))
+    step_var = StepVariable.get_global_step()
+    epsilon = 0.
+    if not kwargs.get("noisy", False):
+      epsilon = linear_anneal(
+          "exploration_epsilon", kwargs["exploration_epsilon_start"],
+          kwargs["exploration_end_step"], step_var,
+          kwargs["exploration_epsilon_end"])
     policy = EpsilonGreedyPolicy(model, epsilon)
     runner_kwargs = {k: kwargs[k] for k in ("storage_size", "storage_init_size",
                                             "batch_size", "steps_per_sample",
@@ -67,17 +70,14 @@ class DQNLearner(Learner):
   @staticmethod
   def make_alg(runner, **kwargs):
     model = runner.policy.model
-    env = runner.env
-    # TODO: support any model by clonning the model from runner.
-    target_model = DQNLearner.make_model(env)
-    target_model.set_weights(model.get_weights())
+    target_model = deepcopy(model)
 
     optimizer_kwargs = {
-        "decay": kwargs.get("decay", 0.95),
+        "alpha": kwargs.get("decay", 0.95),
         "momentum": kwargs.get("momentum", 0.),
-        "epsilon": kwargs.get("optimizer_epsilon", 0.01),
+        "eps": kwargs.get("optimizer_epsilon", 0.01),
     }
-    optimizer = tf.train.RMSPropOptimizer(kwargs["lr"], **optimizer_kwargs)
+    optimizer = RMSprop(model.parameters(), kwargs["lr"], **optimizer_kwargs)
     dqn_kwargs = {k: kwargs[k] for k in
                   ("gamma", "target_update_period", "double") if k in kwargs}
     alg = DQN(model, target_model, optimizer, **dqn_kwargs)

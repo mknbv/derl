@@ -2,8 +2,8 @@
 from abc import ABC, abstractmethod
 
 import numpy as np
-import tensorflow as tf
-import tensorflow_probability as tfp
+import torch
+from torch.distributions import Categorical, Normal, Independent
 
 
 class Policy(ABC):
@@ -30,17 +30,9 @@ class Policy(ABC):
     """
 
 
-def _call_model(model, inputs):
-  """ Calls model possibly with input broadcasting. """
-  expand_dims = model.input.shape.ndims - inputs.ndim
-  inputs = inputs[(None,) * expand_dims]
-  outputs = model(inputs)
-  squeeze_dims = tuple(range(expand_dims))
-  if squeeze_dims:
-    if isinstance(outputs, (list, tuple)):
-      return type(outputs)(map(lambda t: tf.squeeze(t, squeeze_dims), outputs))
-    return tf.squeeze(outputs, squeeze_dims)
-  return outputs
+def _np(tensor):
+  """ Converts given tensor to numpy array. """
+  return tensor.cpu().detach().numpy()
 
 
 class ActorCriticPolicy(Policy):
@@ -59,13 +51,13 @@ class ActorCriticPolicy(Policy):
     else:
       observations = inputs
 
-    *distribution_inputs, values = _call_model(self.model, observations)
+    *distribution_inputs, values = self.model(observations)
     if self.distribution is None:
       if len(distribution_inputs) == 1:
-        distribution = tfp.distributions.Categorical(*distribution_inputs)
+        distribution = Categorical(logits=distribution_inputs[0])
       elif len(distribution_inputs) == 2:
-        distribution = tfp.distributions.MultivariateNormalDiag(
-            *distribution_inputs)
+        loc, scale = distribution_inputs
+        distribution = Independent(Normal(loc=loc, scale=scale), 1)
       else:
         raise ValueError(f"model has {len(distribution_inputs)} "
                          "outputs to create a distribution, "
@@ -77,33 +69,57 @@ class ActorCriticPolicy(Policy):
       return {"distribution": distribution, "values": values}
     actions = distribution.sample()
     log_prob = distribution.log_prob(actions)
-    return {"actions": actions.numpy(),
-            "log_prob": log_prob.numpy(),
-            "values": values.numpy()}
+    return {"actions": _np(actions),
+            "log_prob": _np(log_prob),
+            "values": _np(values)}
 
 
 class EpsilonGreedyPolicy(Policy):
   """ Epsilon greedy policy. """
-  def __init__(self, model, epsilon=0.05, nactions=None):
+  def __init__(self, model, epsilon=0.05, nactions=None,
+               qvalues_from_preds=None):
     self.model = model
     self.epsilon = epsilon
     self.nactions = nactions
+    if qvalues_from_preds is None:
+      qvalues_from_preds = lambda x: x
+    self.qvalues_from_preds = qvalues_from_preds
+
+  @classmethod
+  def categorical(cls, model, epsilon=0.05, nactions=None,
+                  valrange=(-10., 10.)):
+    """ Categorical distributional RL policy. """
+    def qvalues_from_preds(preds):
+      device = next(model.parameters()).device
+      vals = torch.linspace(*valrange, model.nbins).to(device)
+      return torch.sum(vals * preds, -1)
+    return cls(model, epsilon, nactions, qvalues_from_preds)
+
+  @classmethod
+  def quantile(cls, model, epsilon=0.05, nactions=None):
+    """ Quantile distributional RL policy. """
+    def qvalues_from_preds(preds):
+      return torch.mean(preds, -1)
+    return cls(model, epsilon, nactions, qvalues_from_preds)
 
   def act(self, inputs, state=None, update_state=True, training=False):
     if state is not None:
       raise ValueError("epsilon greedy policy does not support state inputs")
 
     epsilon = self.epsilon
-    if isinstance(epsilon, (tf.Tensor, tf.Variable)):
+    if isinstance(epsilon, (torch.Tensor)):
       epsilon = epsilon.numpy()
     if self.nactions is None:
-      preds = _call_model(self.model, inputs).numpy()
-      action_dim = 0 if preds.ndim < self.model.input.shape.ndims else 1
-      self.nactions = preds.shape[action_dim]
-    if np.random.random() <= epsilon:
+      preds = self.model(inputs)
+      qvalues = self.qvalues_from_preds(preds)
+      self.nactions = qvalues.shape[-1]
+    if not training and np.random.random() <= epsilon:
       return {"actions": np.random.randint(self.nactions)}
 
-    preds = _call_model(self.model, inputs).numpy()
-    action_dims = preds.ndim - (inputs.ndim == self.model.input.shape.ndims)
-    qvalues = np.mean(preds, -1 if action_dims > 1 else ())
-    return {"actions": np.argmax(qvalues, -1)}
+    preds = self.model(inputs)
+    if training:
+      return dict(preds=preds)
+
+    qvalues = self.qvalues_from_preds(preds)
+    actions = _np(torch.argmax(qvalues, -1))
+    return dict(actions=actions)

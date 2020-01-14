@@ -4,25 +4,17 @@ from .base import BaseAlgorithm
 from .learners import *
 from .runners import *
 from .models import (
-    MaybeRescale,
-    NatureDQNBase,
-    NoisyDense,
-    compute_outputs,
-    BaseOutputsModel,
-    NatureDQNModel,
-    IMPALABase,
-    IMPALAModel,
-    MLPBase,
-    MLPModel,
-    MujocoModel,
+    NatureCNNBase,
+    NoisyLinear,
+    NatureCNNModel,
+    MLP,
+    MuJoCoModel,
     make_model
 )
 from .policies import Policy, ActorCriticPolicy, EpsilonGreedyPolicy
 from .alg import (
     A2C,
     DQN,
-    QR_DQN,
-    ActorCriticImitation,
     PPO,
 )
 from .scripts import (

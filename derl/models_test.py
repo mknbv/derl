@@ -4,8 +4,8 @@ from unittest import skipUnless
 import numpy as np
 import numpy.testing as nt
 import torch
-from derl.models_torch import (NoisyLinear, NatureCNNBase,
-                               NatureCNNModel, MuJoCoModel)
+from derl.models import (NoisyLinear, NatureCNNBase,
+                         NatureCNNModel, MuJoCoModel)
 from derl.torch_test_case import TorchTestCase
 
 

@@ -1,7 +1,7 @@
 """ Implements Actor-Critic algorithm. """
-import tensorflow as tf
-from derl.base import BaseAlgorithm
-from derl.common import r_squared, reduce_add_summary
+import torch
+from derl.alg.common import BaseAlgorithm, r_squared, torch_from_numpy
+import derl.summary as summary
 
 
 class A2C(BaseAlgorithm):
@@ -23,43 +23,52 @@ class A2C(BaseAlgorithm):
     self.max_grad_norm = max_grad_norm
 
   def policy_loss(self, trajectory, act=None):
-    """ Computes policy loss (including entropy regularization). """
+    """ Compute policiy loss including entropy regularization. """
     if act is None:
       act = self.policy.act(trajectory, training=True)
-    log_prob = act["distribution"].log_prob(trajectory["actions"])
-    advantages = trajectory["advantages"]
+    log_prob = act["distribution"].log_prob(
+        torch_from_numpy(trajectory["actions"], self.device))
+    advantages = torch_from_numpy(trajectory["advantages"], self.device)
 
     if log_prob.shape != advantages.shape:
       raise ValueError("trajectory has mismatched shapes: "
                        f"log_prob.shape={log_prob.shape} "
                        f"advantages.shape={advantages.shape}")
 
-    policy_loss = -tf.reduce_mean(log_prob * advantages)
-    entropy = tf.reduce_mean(act["distribution"].entropy())
-    reduce_add_summary("a2c/advantages", advantages, step=self.step_var)
-    tf.contrib.summary.scalar("a2c/policy_loss", policy_loss,
-                              step=self.step_var)
-    tf.contrib.summary.scalar("a2c/entropy", entropy, step=self.step_var)
+    policy_loss = -torch.mean(log_prob * advantages)
+    entropy = torch.mean(act["distribution"].entropy())
+
+    if summary.should_record():
+      summaries = dict(advantages=torch.mean(advantages),
+                       entropy=torch.mean(entropy),
+                       policy_loss=policy_loss)
+      for key, val in summaries.items():
+        summary.add_scalar(f"a2c/{key}", val, global_step=self.step_var)
+
     return policy_loss - self.entropy_coef * entropy
 
   def value_loss(self, trajectory, act=None):
-    """ Computes value loss. """
+    """ Compute value loss. """
     if act is None:
       act = self.policy.act(trajectory, training=True)
     values = act["values"]
-    value_targets = trajectory["value_targets"]
+    value_targets = torch_from_numpy(trajectory["value_targets"], self.device)
 
     if values.shape != value_targets.shape:
       raise ValueError("trajectory has mismatched shapes "
                        f"values.shape={values.shape} "
                        f"value_targets.shape={value_targets.shape}")
 
-    value_loss = tf.reduce_mean(tf.square(values - value_targets))
-    reduce_add_summary("a2c/value_targets", value_targets, step=self.step_var)
-    reduce_add_summary("a2c/value_preds", values, step=self.step_var)
-    tf.contrib.summary.scalar("a2c/value_loss", value_loss, step=self.step_var)
-    tf.contrib.summary.scalar("a2c/r_squared", r_squared(value_targets, values),
-                              step=self.step_var)
+    value_loss = torch.mean(torch.pow(values - value_targets, 2))
+
+    if summary.should_record():
+      summaries = dict(value_targets=torch.mean(value_targets),
+                       value_preds=torch.mean(values),
+                       value_loss=value_loss,
+                       r_squared=r_squared(values, value_targets))
+      for key, val in summaries.items():
+        summary.add_scalar(f"a2c/{key}", val, global_step=self.step_var)
+
     return value_loss
 
   def loss(self, data):
@@ -67,5 +76,7 @@ class A2C(BaseAlgorithm):
     policy_loss = self.policy_loss(data, act)
     value_loss = self.value_loss(data, act)
     loss = policy_loss + self.value_loss_coef * value_loss
-    tf.contrib.summary.scalar("a2c/loss", loss, step=self.step_var)
+    if summary.should_record():
+      summary.add_scalar(f"a2c/loss", loss,
+                         global_step=self.step_var)
     return loss

@@ -1,7 +1,7 @@
 """ Defines learner test case. """
 import numpy as np
 from derl.torch_test_case import TorchTestCase
-from derl.train_torch import StepVariable
+from derl.train import StepVariable
 import derl.summary as summary
 
 
