@@ -109,7 +109,7 @@ class MuJoCoModelTest(TorchTestCase):
   def test_call(self):
     model = MuJoCoModel(4, (5, 1))
     outputs = model(torch.rand(2, 4))
-    self.assertIsInstance(outputs, collections.Iterable)
+    self.assertIsInstance(outputs, collections.abc.Iterable)
     self.assertEqual(len(outputs), 3)
 
     mean, std, values = outputs
@@ -121,7 +121,7 @@ class MuJoCoModelTest(TorchTestCase):
   def test_broadcast(self):
     model = MuJoCoModel(3, 5)
     outputs = model(torch.rand(3))
-    self.assertIsInstance(outputs, collections.Iterable)
+    self.assertIsInstance(outputs, collections.abc.Iterable)
     self.assertEqual(len(outputs), 2)
     self.assertEqual(outputs[0].shape, (5,))
     self.assertEqual(outputs[1].shape, (5,))
