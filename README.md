@@ -38,14 +38,24 @@ separately.
 Now you can run training:
 
 ```{bash}
-derl-ppo --env-id BreakoutNoFrameskip-v4 --logdir logdir/breakout.00
+derl ppo --env-id BreakoutNoFrameskip-v4 --logdir logdir/breakout.00
+```
+or 3-step double DQN with prioritized experience replay and
+dueling architecture:
+
+```{bash}
+derl dqn --env-id BreakoutNoFrameskip-v4 --logdir logdir/breakout.00
 ```
 
 Or if `gym[mujoco]` is installed:
 
 ```{bash}
-derl-ppo --env-id HalfCheetah-v3 --logdir logdir/half-cheetah.00
+derl ppo --env-id HalfCheetah-v3 --logdir logdir/half-cheetah.00
 ```
+
+Different learning algorithms are selected by passing positional
+argument to derl script, for a full list of arguments you can use `derl -h`,
+to see arguments of a particular algorithm (call it `alg`) use `derl alg`.
 
 The script automatically selects different hyperparameters for
 atari and mujoco envs.
