@@ -1,5 +1,5 @@
 DERL is a a deep reinforcement learning package with a focus on
-simplicity. It is built on top of Eager TensorFlow.
+simplicity. It is built on top of PyTorch.
 
 <p align="middle">
   <img src="./assets/beam-rider.gif" width=175 hspace=10/>
@@ -17,22 +17,13 @@ Currently implemented algorithms:
 
 - A2C
 - PPO
-- Imitation Learning for actor-critic architectures
+- DQN
 
 ## Installation
 
-First, you will need to install tensorflow version 1.12 or 1.13.1:
-
-```{bash}
-pip install tensorflow==1.13.1
-# OR:
-pip install tensorflow-gpu==1.13.1
-```
-
-If you use tensorflow 1.12, you also need to manually install
-tensorflow-probability==0.5 as the setup script will install the
-latest version which is not compatible.  After that cloning the
-repo and installing through pip should work:
+The installation script will install torch but it might be better it
+install it manually beforehand in order to insure proper system and
+CUDA dependencies.
 
 ```{bash}
 git clone https://github.com/MichaelKonobeev/derl.git
@@ -40,7 +31,7 @@ pip install -e derl
 ```
 
 `gym[atari]` will be installed by `setup.py`, but you will need
-to install other environment requirements (e.g. to use mujoco)
+to install other environment requirements (e.g. to use mujoco or pybullet)
 separately.
 
 Now you can run training:
