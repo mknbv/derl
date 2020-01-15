@@ -17,7 +17,8 @@ Currently implemented algorithms:
 
 - A2C
 - PPO
-- DQN
+- DQN (n-step, double, dueling, with prioritized experience replay,
+with noisy networks for exploration)
 
 ## Installation
 
