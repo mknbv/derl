@@ -5,7 +5,6 @@ from derl.models import make_model
 from derl.policies import ActorCriticPolicy
 from derl.alg.ppo import PPO
 from derl.runners.onpolicy import make_ppo_runner
-from derl.train import linear_anneal
 
 
 class PPOLearner(Learner):
@@ -61,8 +60,8 @@ class PPOLearner(Learner):
 
   @staticmethod
   def make_alg(runner, **kwargs):
-    lr = linear_anneal("lr", kwargs["lr"], kwargs["num_train_steps"],
-                       step_var=runner.step_var)
+    lr = runner.step_var.linear_anneal(
+        kwargs["lr"], kwargs["num_train_steps"], name="lr")
     params = runner.policy.model.parameters()
     if "optimizer_epsilon" in kwargs:
       optimizer = Adam(params, lr, eps=kwargs["optimizer_epsilon"])

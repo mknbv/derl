@@ -24,23 +24,18 @@ class StepVariable:
     """ Adds annealing tensor. """
     self.anneals.append((tensor, function, name))
 
-
-def linear_anneal(name, start_value, nsteps, step_var, end_value=0.):
-  """ Returns variable that will be linearly annealed. """
-  if not isinstance(step_var, StepVariable):
-    raise TypeError("step_var must be an instance of StepVariable, "
-                    f"got {type(step_var)} instead")
-
-  var = torch.tensor(start_value)  # pylint: disable=not-callable
-  step_var.add_annealing_tensor(
-      var,
-      lambda: torch.clamp(
-          torch.tensor(  # pylint: disable=not-callable
-              start_value
-              + int(step_var) / nsteps * (end_value - start_value)
-          ),
-          min(start_value, end_value),
-          max(start_value, end_value)
-      ),
-      name)
-  return var
+  def linear_anneal(self, start_value, nsteps, end_value=0., name=None):
+    """ Returns tensor which will be annealed with each update of the step. """
+    var = torch.tensor(start_value)  # pylint: disable=not-callable
+    self.add_annealing_tensor(
+        var,
+        lambda: torch.clamp(
+            torch.tensor(  # pylint: disable=not-callable
+                start_value
+                + int(self) / nsteps * (end_value - start_value)
+            ),
+            min(start_value, end_value),
+            max(start_value, end_value)
+        ),
+        name)
+    return var

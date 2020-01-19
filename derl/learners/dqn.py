@@ -6,7 +6,7 @@ from derl.learners.learner import Learner
 from derl.models import NatureCNNModel
 from derl.policies import EpsilonGreedyPolicy
 from derl.runners.experience_replay import make_dqn_runner
-from derl.train import StepVariable, linear_anneal
+from derl.train import StepVariable
 
 
 class DQNLearner(Learner):
@@ -54,10 +54,11 @@ class DQNLearner(Learner):
     step_var = StepVariable()
     epsilon = 0.
     if not kwargs.get("noisy", False):
-      epsilon = linear_anneal(
-          "exploration_epsilon", kwargs["exploration_epsilon_start"],
-          kwargs["exploration_end_step"], step_var,
-          kwargs["exploration_epsilon_end"])
+      epsilon = step_var.linear_anneal(
+          start_value=kwargs["exploration_epsilon_start"],
+          nsteps=kwargs["exploration_end_step"],
+          end_value=kwargs["exploration_epsilon_end"],
+          name="exploration_epsilon")
     policy = EpsilonGreedyPolicy(model, epsilon)
     runner_kwargs = {k: kwargs[k] for k in ("storage_size", "storage_init_size",
                                             "batch_size", "steps_per_sample",

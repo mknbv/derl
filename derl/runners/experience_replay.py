@@ -4,7 +4,6 @@ import numpy as np
 from derl.runners.env_runner import EnvRunner, RunnerWrapper
 from derl.runners.onpolicy import TransformInteractions
 from derl.runners.storage import InteractionStorage, PrioritizedStorage
-from derl.train import linear_anneal
 
 
 class ExperienceReplay(RunnerWrapper):
@@ -58,8 +57,8 @@ class PrioritizedExperienceReplay(ExperienceReplay):
       if self.runner.nsteps is None:
         raise ValueError("when beta is a tuple of (start, end) values "
                          "but runner.nsteps cannot be None")
-      beta = linear_anneal("per_beta", beta[0], self.runner.nsteps,
-                           self.runner.step_var, beta[1])
+      beta = self.step_var.linear_anneal(
+          beta[0], self.runner.nsteps, beta[1], "per_beta")
     self.alpha = alpha
     self.beta = beta
     self.epsilon = epsilon

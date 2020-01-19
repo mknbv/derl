@@ -7,7 +7,6 @@ from derl.policies import ActorCriticPolicy
 from derl.runners.env_runner import EnvRunner
 from derl.runners.onpolicy import TransformInteractions
 from derl.runners.trajectory_transforms import GAE, MergeTimeBatch
-from derl.train import linear_anneal
 
 
 class A2CLearner(Learner):
@@ -49,8 +48,8 @@ class A2CLearner(Learner):
 
   @staticmethod
   def make_alg(runner, **kwargs):
-    lr = linear_anneal("lr", kwargs["lr"], kwargs["num_train_steps"],
-                       runner.step_var)
+    lr = runner.step_var.linear_anneal(
+        kwargs["lr"], kwargs["num_train_steps"], name="lr")
     optimizer_kwargs = {
         "alpha": kwargs.pop("optimizer_alpha", 0.99),
         "eps": kwargs.pop("optimizer_epsilon", 1e-5),
