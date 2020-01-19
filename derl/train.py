@@ -5,46 +5,9 @@ import derl.summary as summary
 
 class StepVariable:
   """ Step variable. """
-  _global_step = None
-
   def __init__(self, value=0):
     self.value = value
     self.anneals = []
-
-  @classmethod
-  def _check_global_step(cls, should_exist):
-    if should_exist and cls._global_step is None:
-      raise ValueError("global step does not exist, create it by calling "
-                       "create_global_step")
-    if not should_exist and cls._global_step is not None:
-      raise ValueError(f"global step already exists: {cls._global_step}")
-
-  @classmethod
-  def create_global_step(cls, value=0):
-    """ Creates and returns global step variable. """
-    cls._check_global_step(should_exist=False)
-    cls._global_step = StepVariable(value)
-    return cls._global_step
-
-  @classmethod
-  def get_global_step(cls):
-    """ Returns global step variable. """
-    cls._check_global_step(True)
-    return cls._global_step
-
-  @classmethod
-  def get_or_create_global_step(cls):
-    """ Returns global step which is created if it does already not exist. """
-    if cls._global_step is not None:
-      return cls._global_step
-    return cls.create_global_step()
-
-  @classmethod
-  def unset_global_step(cls):
-    """ Removes global step variable. """
-    step = cls._global_step
-    cls._global_step = None
-    return step
 
   def __int__(self):
     return self.value

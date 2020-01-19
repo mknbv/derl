@@ -5,7 +5,7 @@ from derl.models import make_model
 from derl.policies import ActorCriticPolicy
 from derl.alg.ppo import PPO
 from derl.runners.onpolicy import make_ppo_runner
-from derl.train import StepVariable, linear_anneal
+from derl.train import linear_anneal
 
 
 class PPOLearner(Learner):
@@ -56,9 +56,7 @@ class PPOLearner(Learner):
                      ["gamma", "lambda_", "num_epochs", "num_minibatches"]
                      if key in kwargs}
     runner = make_ppo_runner(env, policy, kwargs["num_runner_steps"],
-                             kwargs["num_train_steps"],
-                             step_var=StepVariable.get_global_step(),
-                             **runner_kwargs)
+                             kwargs["num_train_steps"], **runner_kwargs)
     return runner
 
   @staticmethod

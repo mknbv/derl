@@ -10,7 +10,7 @@ class EnvRunner:
     self.env = env
     self.policy = policy
     if step_var is None:
-      step_var = StepVariable("env_runner_step")
+      step_var = StepVariable()
     self.step_var = step_var
     self.nsteps = nsteps
     self.horizon = horizon
@@ -55,6 +55,7 @@ class EnvRunner:
       interactions["state"] = dict(latest_observations=obs)
       self.step_var.assign_add(self.horizon * (self.nenvs or 1))
       yield dict(interactions)
+
 
 class RunnerWrapper:
   """ Wraps an env runner. """

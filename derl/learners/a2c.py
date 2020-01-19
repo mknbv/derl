@@ -7,7 +7,7 @@ from derl.policies import ActorCriticPolicy
 from derl.runners.env_runner import EnvRunner
 from derl.runners.onpolicy import TransformInteractions
 from derl.runners.trajectory_transforms import GAE, MergeTimeBatch
-from derl.train import StepVariable, linear_anneal
+from derl.train import linear_anneal
 
 
 class A2CLearner(Learner):
@@ -39,8 +39,7 @@ class A2CLearner(Learner):
     gae_kwargs = {k: kwargs[k] for k in ("gamma", "lambda_") if k in kwargs}
     gae_kwargs["normalize"] = kwargs.get("normalize_gae", False)
     runner = EnvRunner(env, policy, kwargs["num_runner_steps"],
-                       nsteps=kwargs["num_train_steps"],
-                       step_var=StepVariable.get_global_step())
+                       nsteps=kwargs["num_train_steps"])
     transforms = [GAE(policy, **gae_kwargs)]
     if hasattr(env.unwrapped, "nenvs"):
       transforms.append(MergeTimeBatch())

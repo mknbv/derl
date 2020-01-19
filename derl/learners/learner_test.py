@@ -1,7 +1,6 @@
 """ Defines learner test case. """
 import numpy as np
 from derl.torch_test_case import TorchTestCase
-from derl.train import StepVariable
 import derl.summary as summary
 
 
@@ -9,7 +8,6 @@ class LearnerTestCase(TorchTestCase):
   """ Generic learner test case. """
   def setUp(self):
     super().setUp()
-    StepVariable.unset_global_step()
     self.env = None
     self.learner = None
     summary.stop_recording()

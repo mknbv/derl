@@ -51,7 +51,7 @@ class DQNLearner(Learner):
     model = model or DQNLearner.make_model(
         env, noisy=kwargs.get("noisy", False),
         dueling=kwargs.get("dueling", True))
-    step_var = StepVariable.get_global_step()
+    step_var = StepVariable()
     epsilon = 0.
     if not kwargs.get("noisy", False):
       epsilon = linear_anneal(
