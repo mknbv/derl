@@ -56,16 +56,19 @@ class Learner:
     for interactions in self.runner.run():
       yield interactions, self.alg.step(interactions)
 
-  def learning_generator(self, logdir=None, log_freq=1e-5, disable_tqdm=False):
+  def learning_generator(self, logdir=None, nlogs=1e5, disable_tqdm=False):
     """ Returns learning generator object. """
     if not getattr(self.runner.step_var, "auto_update", True):
       raise ValueError("learn method is not supported when runner.step_var "
                        "does not auto-update")
 
-    if not 0 <= log_freq <= 1:
-      raise ValueError(f"log_freq must be in [0, 1], got {log_freq}")
+    nlogs_has_valid_type = (
+        isinstance(nlogs, int)
+        or isinstance(nlogs, float) and nlogs.is_integer())
+    if not nlogs_has_valid_type:
+      raise TypeError(f"nlogs must integer, got {nlogs}")
     if logdir is not None:
-      log_period = int(len(self.runner) * log_freq)
+      log_period = int(len(self.runner) / nlogs)
       summary.make_writer(logdir)
       summary.record_with_period(log_period, self.runner.step_var)
 
@@ -74,14 +77,14 @@ class Learner:
         pbar.update(int(self.runner.step_var) - pbar.n)
         yield interactions, loss
 
-  def learn(self, logdir=None, log_freq=1e-5, save_weights=None):
+  def learn(self, logdir=None, nlogs=1e5, save_weights=None):
     """ Performs learning for a specified number of steps. """
     if save_weights and logdir is None:
       raise ValueError("logdir cannot be None when save_weights is True")
     if save_weights is None:
       save_weights = logdir is not None
 
-    for _ in self.learning_generator(logdir, log_freq):
+    for _ in self.learning_generator(logdir, nlogs):
       pass
 
     if save_weights:
