@@ -31,16 +31,20 @@ class Summary:
   def __init__(self, module):
     self.module = module
     self.writer = None
-    self.should_record = const(True)
+    self.should_record_fn = const(True)
     self.set_writer_functions()
+
+  def should_record(self):
+    """ Returns true if summaries should be recorded during this step. """
+    return self.should_record_fn()
 
   def start_recording(self):
     """ Enables summary recording. """
-    self.should_record = const(True)
+    self.should_record_fn = const(True)
 
   def stop_recording(self):
     """ Disables summary recording. """
-    self.should_record = const(False)
+    self.should_record_fn = const(False)
 
   def record_with_period(self, period, step_var):
     """ Automatically start and stop recording with period. """
