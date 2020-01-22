@@ -1,6 +1,6 @@
 """ Annealing variables. """
 from abc import ABC, abstractmethod
-import numpy as np
+import torch
 
 
 class AnnealingVariable(ABC):
@@ -19,11 +19,13 @@ class TorchSched(AnnealingVariable):
     self.scheduler = scheduler
 
   def get_value(self):
-    return self.scheduler.get_last_lr
+    # pylint: disable=not-callable
+    return torch.tensor(self.scheduler.get_last_lr())
 
   def step(self):
     self.scheduler.step()
     return self.get_value()
+
 
 class LinearAnneal(AnnealingVariable):
   """ Linearly annealing variable. """
@@ -32,7 +34,7 @@ class LinearAnneal(AnnealingVariable):
     self.end = end
     self.step_count = 0
     self.num_steps = num_steps
-    self.value = self.start
+    self.value = torch.tensor(self.start)  # pylint: disable=not-callable
 
   def get_value(self):
     return self.value
@@ -40,8 +42,9 @@ class LinearAnneal(AnnealingVariable):
   def step(self):
     self.step_count += 1
     step_frac = self.step_count / self.num_steps
-    self.value = np.clip(
-        self.start + (self.end - self.start) * step_frac,
+    self.value = torch.clamp(
+        # pylint: disable=not-callable
+        torch.tensor(self.start + (self.end - self.start) * step_frac),
         min(self.start, self.end),
         max(self.start, self.end)
     )
