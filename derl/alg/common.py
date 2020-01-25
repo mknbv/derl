@@ -2,6 +2,7 @@
 from abc import ABC, abstractmethod
 
 import torch
+from derl.anneal import camel2snake
 from derl.train import StepVariable
 import derl.summary as summary
 
@@ -64,3 +65,53 @@ class BaseAlgorithm(ABC):
     self.optimizer.zero_grad()
     self.step_var.assign_add(1)
     return loss
+
+
+class Alg(ABC):
+  """ Generic learning algorithm specified by its loss function. """
+  def __init__(self, runner, optimizer, anneals=None,
+               max_grad_norm=None, name=None):
+    self.runner = runner
+    self.model = self.runner.policy.model
+    self.optimizer = optimizer
+    self.anneals = anneals if anneals is not None else []
+    self.max_grad_norm = max_grad_norm
+    if name is None:
+      name = camel2snake(self.__class__.__name__)
+    self.name = name
+    self.step_var = 0
+
+  @abstractmethod
+  def loss(self, data):
+    """ Computes and returns the loss function on data. """
+
+  def preprocess_gradients(self, parameters):
+    """ Applies gradient preprocessing. """
+    grad_norm = None
+    if self.max_grad_norm is not None:
+      grad_norm = torch.nn.utils.clip_grad_norm_(
+          parameters, self.max_grad_norm)
+    if summary.should_record():
+      if grad_norm is None:
+        grad_norm = total_norm(p.grad for p in parameters if p.grad is not None)
+      summary.add_scalar(f"{self.name}/grad_norm", grad_norm,
+                         global_step=self.step_var)
+
+  def step(self, data):
+    """ Performs learning step of the algorithm. """
+    loss = self.loss(data)
+    loss.backward()
+    self.preprocess_gradients(self.model.parameters())
+    self.optimizer.step()
+    self.optimizer.zero_grad()
+    for anneal in self.anneals:
+      if hasattr(anneal, "summarize") and summary.should_record():
+        anneal.summarize(self.step)
+      anneal.step()
+    self.step_var += 1
+    return loss
+
+  def learn(self, obs=None):
+    """ Performs learning with this algorithm. """
+    for data in self.runner.run(obs=obs):
+      yield data, self.step(data)
