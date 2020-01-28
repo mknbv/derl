@@ -89,15 +89,43 @@ class Loss(ABC):
     """ Computes and returns loss value on given data. """
 
 
+class Trainer(ABC):
+  """ Class to perform algorithm training. """
+  def __init__(self, optimizer, anneals=None, max_grad_norm=None):
+    self.optimizer = optimizer
+    self.anneals = anneals or []
+    self.max_grad_norm = max_grad_norm
+
+  def preprocess_gradients(self, parameters, name, step_var):
+    """ Applies gradient preprocessing. """
+    grad_norm = None
+    if self.max_grad_norm is not None:
+      grad_norm = torch.nn.utils.clip_grad_norm_(parameters, self.max_grad_norm)
+    if summary.should_record():
+      if grad_norm is None:
+        grad_norm = total_norm(p.grad for p in parameters if p.grad is not None)
+      summary.add_scalar(f"{name}/grad_norm", grad_norm,
+                         global_step=step_var)
+
+  def step(self, loss, model, name, step_var):
+    """ Performs single training step of a given algorithm. """
+    loss.backward()
+    self.preprocess_gradients(model.parameters(), name, step_var)
+    for anneal in self.anneals:
+      if summary.should_record():
+        anneal.summarize(step_var)
+      anneal.step_to(int(step_var))
+    self.optimizer.step()
+    self.optimizer.zero_grad()
+    return loss
+
+
 class Alg(ABC):
   """ Generic learning algorithm specified by its loss function. """
-  def __init__(self, runner, optimizer, anneals=None,
-               max_grad_norm=None, name=None):
+  def __init__(self, runner, trainer, name=None):
     self.runner = runner
     self.model = self.runner.policy.model
-    self.optimizer = optimizer
-    self.anneals = anneals if anneals is not None else []
-    self.max_grad_norm = max_grad_norm
+    self.trainer = trainer
     if name is None:
       name = camel2snake(self.__class__.__name__)
     self.name = name
@@ -107,33 +135,14 @@ class Alg(ABC):
   def loss(self, data):
     """ Computes and returns the loss function on data. """
 
-  def preprocess_gradients(self, parameters):
-    """ Applies gradient preprocessing. """
-    grad_norm = None
-    if self.max_grad_norm is not None:
-      grad_norm = torch.nn.utils.clip_grad_norm_(
-          parameters, self.max_grad_norm)
-    if summary.should_record():
-      if grad_norm is None:
-        grad_norm = total_norm(p.grad for p in parameters if p.grad is not None)
-      summary.add_scalar(f"{self.name}/grad_norm", grad_norm,
-                         global_step=self.step_var)
-
   def step(self, data):
     """ Performs learning step of the algorithm. """
     loss = self.loss(data)
-    loss.backward()
-    self.preprocess_gradients(self.model.parameters())
-    self.optimizer.step()
-    self.optimizer.zero_grad()
-    for anneal in self.anneals:
-      if hasattr(anneal, "summarize") and summary.should_record():
-        anneal.summarize(self.step)
-      anneal.step()
-    self.step_var += 1
+    self.trainer.step(loss, self.model, self.name, self.runner.step_var)
     return loss
 
-  def learn(self, obs=None):
+  def learn(self):
     """ Performs learning with this algorithm. """
-    for data in self.runner.run(obs=obs):
-      yield data, self.step(data)
+    for data in self.runner.run():
+      loss = self.step(data)
+      yield data, loss
