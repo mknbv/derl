@@ -1,6 +1,8 @@
 """ Advantage Actor-Critic Learner. """
 from torch.optim import RMSprop
 from derl.alg.a2c import A2C
+from derl.alg.common import Trainer
+from derl.anneal import LinearAnneal
 from derl.learners.learner import Learner
 from derl.models import make_model
 from derl.policies import ActorCriticPolicy
@@ -48,15 +50,15 @@ class A2CLearner(Learner):
 
   @staticmethod
   def make_alg(runner, **kwargs):
-    lr = runner.step_var.linear_anneal(
-        kwargs["lr"], kwargs["num_train_steps"], name="lr")
+    lr = LinearAnneal(kwargs["lr"], kwargs["num_train_steps"], 0., name="lr")
     optimizer_kwargs = {
         "alpha": kwargs.pop("optimizer_alpha", 0.99),
         "eps": kwargs.pop("optimizer_epsilon", 1e-5),
     }
     optimizer = RMSprop(runner.policy.model.parameters(),
-                        lr, **optimizer_kwargs)
-    a2c_kwargs = {k: kwargs[k] for k in
-                  ("value_loss_coef", "entropy_coef", "max_grad_norm")
+                        lr.get_tensor(), **optimizer_kwargs)
+    trainer = Trainer(optimizer, anneals=[lr],
+                      max_grad_norm=kwargs.get("max_grad_norm"))
+    a2c_kwargs = {k: kwargs[k] for k in ("value_loss_coef", "entropy_coef")
                   if k in kwargs}
-    return A2C(runner.policy, optimizer, **a2c_kwargs)
+    return A2C(runner, trainer, **a2c_kwargs)
