@@ -124,18 +124,19 @@ class Trainer(ABC):
 
 class Alg(ABC):
   """ Generic learning algorithm specified by its loss function. """
-  def __init__(self, runner, trainer, name=None):
+  def __init__(self, runner, trainer, loss_fn, name=None):
     self.runner = runner
     self.model = self.runner.policy.model
     self.trainer = trainer
+    self.loss_fn = loss_fn
     if name is None:
       name = camel2snake(self.__class__.__name__)
     self.name = name
     self.step_var = 0
 
-  @abstractmethod
   def loss(self, data):
     """ Computes and returns the loss function on data. """
+    return self.loss_fn(data)
 
   def step(self, data):
     """ Performs learning step of the algorithm. """
