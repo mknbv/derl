@@ -72,7 +72,9 @@ class Loss(ABC):
   def __init__(self, model, name=None):
     self.model = model
     if name is None:
-      name = camel2snake(self.__class__.__name__)
+      name = self.__class__.__name__
+      name = name[:-len("Loss")] if name.endswith("Loss") else name
+      name = camel2snake(name)
     self.name = name
 
   @property
