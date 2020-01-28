@@ -67,6 +67,28 @@ class BaseAlgorithm(ABC):
     return loss
 
 
+class Loss(ABC):
+  """ Algorithm loss function. """
+  def __init__(self, model, name=None):
+    self.model = model
+    if name is None:
+      name = camel2snake(self.__class__.__name__)
+    self.name = name
+
+  @property
+  def device(self):
+    """ Returns device of the underlying model. """
+    return next(self.model.parameters()).device
+
+  def torch_from_numpy(self, arr):
+    """ Casts np.ndarray to torch.Tensor and moves to model device. """
+    return torch.from_numpy(arr).to(device=self.device)
+
+  @abstractmethod
+  def __call__(self, data):
+    """ Computes and returns loss value on given data. """
+
+
 class Alg(ABC):
   """ Generic learning algorithm specified by its loss function. """
   def __init__(self, runner, optimizer, anneals=None,
