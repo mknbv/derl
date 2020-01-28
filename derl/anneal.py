@@ -45,7 +45,8 @@ class AnnealingVariable(ABC):
 
   def summarize(self, global_step):
     """ Writes summary of the value for tensorboard. """
-    summary.add_scalar(self.name, self.get_tensor(), global_step=global_step)
+    summary.add_scalar(f"anneal/{self.name}", self.get_tensor(),
+                       global_step=global_step)
 
 
 class TorchSched(AnnealingVariable):
