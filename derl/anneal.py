@@ -69,11 +69,11 @@ class TorchSched(AnnealingVariable):
 
 class LinearAnneal(AnnealingVariable):
   """ Linearly annealing variable. """
-  def __init__(self, start, end, nsteps, name=None):
+  def __init__(self, start, nsteps, end=0., name=None):
     super().__init__(name)
     self.start = start
-    self.end = end
     self.nsteps = nsteps
+    self.end = end
     self.tensor = torch.tensor(self.start)  # pylint: disable=not-callable
 
   def get_tensor(self):
