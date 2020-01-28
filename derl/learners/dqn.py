@@ -2,11 +2,11 @@
 from copy import deepcopy
 from torch.optim import RMSprop
 from derl.alg.dqn import DQN
+from derl.anneal import LinearAnneal
 from derl.learners.learner import Learner
 from derl.models import NatureCNNModel
 from derl.policies import EpsilonGreedyPolicy
 from derl.runners.experience_replay import make_dqn_runner
-from derl.train import StepVariable
 
 
 class DQNLearner(Learner):
@@ -51,21 +51,23 @@ class DQNLearner(Learner):
     model = model or DQNLearner.make_model(
         env, noisy=kwargs.get("noisy", False),
         dueling=kwargs.get("dueling", True))
-    step_var = StepVariable()
     epsilon = 0.
+    anneals = []
     if not kwargs.get("noisy", False):
-      epsilon = step_var.linear_anneal(
-          start_value=kwargs["exploration_epsilon_start"],
+      epsilon_anneal = LinearAnneal(
+          start=kwargs["exploration_epsilon_start"],
           nsteps=kwargs["exploration_end_step"],
-          end_value=kwargs["exploration_epsilon_end"],
+          end=kwargs["exploration_epsilon_end"],
           name="exploration_epsilon")
+      epsilon = epsilon_anneal.get_tensor()
+      anneals.append(epsilon_anneal)
     policy = EpsilonGreedyPolicy(model, epsilon)
     runner_kwargs = {k: kwargs[k] for k in ("storage_size", "storage_init_size",
                                             "batch_size", "steps_per_sample",
                                             "nstep", "prioritized")
                      if k in kwargs}
     runner = make_dqn_runner(env, policy, kwargs["num_train_steps"],
-                             step_var=step_var, **runner_kwargs)
+                             anneals=anneals, **runner_kwargs)
     return runner
 
   @staticmethod

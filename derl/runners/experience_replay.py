@@ -1,19 +1,27 @@
 """ Implements experience replay. """
 from functools import partial
 import numpy as np
+from derl.anneal import LinearAnneal
 from derl.runners.env_runner import EnvRunner, RunnerWrapper
 from derl.runners.onpolicy import TransformInteractions
 from derl.runners.storage import InteractionStorage, PrioritizedStorage
+import derl.summary as summary
 
 
 class ExperienceReplay(RunnerWrapper):
   """ Saves interactions to storage and samples from it. """
-  def __init__(self, runner, storage, storage_init_size=50_000, batch_size=32):
+  def __init__(self, runner, storage,
+               storage_init_size=50_000,
+               batch_size=32,
+               anneals=None):
     super().__init__(runner)
     self.storage = storage
     self.storage_init_size = storage_init_size
-    self.initialized_storage = False
     self.batch_size = batch_size
+    if anneals is None:
+      anneals = []
+    self.anneals = tuple(anneals)
+    self.initialized_storage = False
 
   def initialize_storage(self, obs=None):
     """ Initializes the storage with random interactions with environment. """
@@ -39,14 +47,24 @@ class ExperienceReplay(RunnerWrapper):
       interactions = [interactions[k] for k in ("observations", "actions",
                                                 "rewards", "resets")]
       self.storage.add_batch(*interactions)
+      for anneal in self.anneals:
+        if hasattr(anneal, "summarize") and summary.should_record():
+          anneal.summarize(self.step_var)
+        anneal.step()
       yield self.storage.sample(self.batch_size)
 
 
 class PrioritizedExperienceReplay(ExperienceReplay):
   """ Experience replay with prioritized storage. """
-  def __init__(self, runner, storage, alpha=0.6, beta=(0.4, 1),
-               epsilon=1e-8, **experience_replay_kwargs):
-    super().__init__(runner, storage, **experience_replay_kwargs)
+  def __init__(self, runner, storage,
+               alpha=0.6,
+               beta=(0.4, 1),
+               epsilon=1e-8,
+               anneals=None,
+               **experience_replay_kwargs):
+    if anneals is None:
+      anneals = []
+    anneals = list(anneals)
     if not hasattr(storage, "update_priorities"):
       raise ValueError("storage does not implement `update_priorities` "
                        "method")
@@ -54,11 +72,14 @@ class PrioritizedExperienceReplay(ExperienceReplay):
       if len(beta) != 2:
         raise ValueError("beta must be a float, a tuple or a list of length 2 "
                          f"got len(beta)={len(beta)}")
-      if self.runner.nsteps is None:
+      if runner.nsteps is None:
         raise ValueError("when beta is a tuple of (start, end) values "
-                         "but runner.nsteps cannot be None")
-      beta = self.step_var.linear_anneal(
-          beta[0], self.runner.nsteps, beta[1], "per_beta")
+                         "runner.nsteps cannot be None")
+      beta_anneal = LinearAnneal(beta[0], runner.nsteps, beta[1], "per_beta")
+      beta = beta_anneal.get_tensor()
+      anneals.append(beta_anneal)
+    super().__init__(runner, storage, anneals=anneals,
+                     **experience_replay_kwargs)
     self.alpha = alpha
     self.beta = beta
     self.epsilon = epsilon
@@ -106,9 +127,9 @@ def dqn_runner_wrap(runner, prioritized=True,
                           batch_size=batch_size)
 
 def make_dqn_runner(env, policy, num_train_steps, steps_per_sample=4,
-                    step_var=None, **wrap_kwargs):
+                    **wrap_kwargs):
   """ Creates experience replay runner as used typically used with DQN alg. """
   runner = EnvRunner(env, policy, horizon=steps_per_sample,
-                     nsteps=num_train_steps, step_var=step_var)
+                     nsteps=num_train_steps)
   runner = TransformInteractions(runner)
   return dqn_runner_wrap(runner, **wrap_kwargs)
