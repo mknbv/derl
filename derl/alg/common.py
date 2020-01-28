@@ -76,6 +76,7 @@ class Loss(ABC):
       name = name[:-len("Loss")] if name.endswith("Loss") else name
       name = camel2snake(name)
     self.name = name
+    self.call_count = 0
 
   @property
   def device(self):
@@ -87,8 +88,14 @@ class Loss(ABC):
     return torch.from_numpy(arr).to(device=self.device)
 
   @abstractmethod
+  def _compute_loss(self, data):
+    """ Implements loss value computation. """
+
   def __call__(self, data):
     """ Computes and returns loss value on given data. """
+    loss = self._compute_loss(data)
+    self.call_count += 1
+    return loss
 
 
 class Trainer(ABC):
@@ -97,8 +104,9 @@ class Trainer(ABC):
     self.optimizer = optimizer
     self.anneals = anneals or []
     self.max_grad_norm = max_grad_norm
+    self.step_count = 0
 
-  def preprocess_gradients(self, parameters, name, step_var):
+  def preprocess_gradients(self, parameters, name):
     """ Applies gradient preprocessing. """
     grad_norm = None
     if self.max_grad_norm is not None:
@@ -107,18 +115,19 @@ class Trainer(ABC):
       if grad_norm is None:
         grad_norm = total_norm(p.grad for p in parameters if p.grad is not None)
       summary.add_scalar(f"{name}/grad_norm", grad_norm,
-                         global_step=step_var)
+                         global_step=self.step_count)
 
   def step(self, loss, model, name, step_var):
     """ Performs single training step of a given algorithm. """
     loss.backward()
-    self.preprocess_gradients(model.parameters(), name, step_var)
+    self.preprocess_gradients(model.parameters(), name)
     for anneal in self.anneals:
       if summary.should_record():
         anneal.summarize(step_var)
       anneal.step_to(int(step_var))
     self.optimizer.step()
     self.optimizer.zero_grad()
+    self.step_count += 1
     return loss
 
 
