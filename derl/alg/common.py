@@ -141,7 +141,6 @@ class Alg(ABC):
     if name is None:
       name = camel2snake(self.__class__.__name__)
     self.name = name
-    self.step_var = 0
 
   def loss(self, data):
     """ Computes and returns the loss function on data. """
