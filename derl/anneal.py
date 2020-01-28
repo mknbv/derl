@@ -22,7 +22,7 @@ class AnnealingVariable(ABC):
 
   def get_current_value(self):
     """ Returns the current value of the variable. """
-    return torch.tensor(self.get_tensor())  # pylint: disable=not-callable
+    return self.get_tensor().clone()  # pylint: disable=not-callable
 
   @abstractmethod
   def step(self):
