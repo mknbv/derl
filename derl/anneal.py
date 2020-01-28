@@ -15,6 +15,7 @@ class AnnealingVariable(ABC):
   """ Variable the value of which changes after each step. """
   def __init__(self, name=None):
     self.name = name or camel2snake(self.__class__.__name__)
+    self.step_count = 0
 
   @abstractmethod
   def get_tensor(self):
@@ -22,11 +23,25 @@ class AnnealingVariable(ABC):
 
   def get_current_value(self):
     """ Returns the current value of the variable. """
-    return self.get_tensor().clone()  # pylint: disable=not-callable
+    return self.get_tensor().clone()
 
   @abstractmethod
+  def _step_impl(self):
+    """ Implementation of variable update. """
+
   def step(self):
     """ Update the value of the variable. """
+    self.step_count += 1
+    val = self._step_impl()
+    return val
+
+  def step_to(self, val):
+    """ Updates the value of the variable `val - self.step_count` times. """
+    if val < self.step_count:
+      raise ValueError(f"val={val} cannot be smaller than "
+                       f"self.step_count={self.step_count}")
+    for _ in range(val - self.step_count):
+      self.step()
 
   def summarize(self, global_step):
     """ Writes summary of the value for tensorboard. """
@@ -44,7 +59,7 @@ class TorchSched(AnnealingVariable):
   def get_tensor(self):
     return self.tensor
 
-  def step(self):
+  def _step_impl(self):
     self.scheduler.step()
     # pylint: disable=not-callable
     self.tensor.data = torch.tensor(self.scheduler.get_last_lr())
@@ -57,15 +72,13 @@ class LinearAnneal(AnnealingVariable):
     super().__init__(name)
     self.start = start
     self.end = end
-    self.step_count = 0
     self.nsteps = nsteps
     self.tensor = torch.tensor(self.start)  # pylint: disable=not-callable
 
   def get_tensor(self):
     return self.tensor
 
-  def step(self):
-    self.step_count += 1
+  def _step_impl(self):
     step_frac = self.step_count / self.nsteps
     self.tensor.data = torch.clamp(
         # pylint: disable=not-callable
