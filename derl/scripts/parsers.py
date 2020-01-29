@@ -14,7 +14,7 @@ def get_simple_parser(add_env_id=True, add_logdir=True, nlogs=1e5):
 
   maybe_add(add_env_id, "--env-id", required=True)
   maybe_add(add_logdir, "--logdir", required=True)
-  maybe_add(add_logdir, "--log-freq", type=float, default=nlogs)
+  maybe_add(add_logdir, "--nlogs", type=float, default=nlogs)
   return parser
 
 
