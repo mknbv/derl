@@ -1,6 +1,7 @@
 """ Implements Deep Q-Learning Learner. """
 from copy import deepcopy
 from torch.optim import RMSprop
+from derl.alg.common import Trainer
 from derl.alg.dqn import DQN
 from derl.anneal import LinearAnneal
 from derl.learners.learner import Learner
@@ -81,7 +82,8 @@ class DQNLearner(Learner):
         "eps": kwargs.get("optimizer_epsilon", 0.01),
     }
     optimizer = RMSprop(model.parameters(), kwargs["lr"], **optimizer_kwargs)
+    trainer = Trainer(optimizer)
     dqn_kwargs = {k: kwargs[k] for k in
                   ("gamma", "target_update_period", "double") if k in kwargs}
-    alg = DQN(model, target_model, optimizer, **dqn_kwargs)
+    alg = DQN(runner, trainer, target_model, **dqn_kwargs)
     return alg

@@ -1,27 +1,28 @@
 """ Deep Q-learning algorithm implementation. """
 import torch
 import torch.nn.functional as F
-from derl.alg.common import BaseAlgorithm, r_squared, torch_from_numpy
+from derl.alg.common import Loss, Alg, r_squared
 import derl.summary as summary
 
 
 class TargetUpdater:
   """ Provides interface for updating target model with a given period. """
-  def __init__(self, model, target, step_var, period=10_000):
+  def __init__(self, model, target, period=10_000):
     self.model = model
     self.target = target
+    if period is None:
+      period = float("inf")
     self.period = period
-    self.step_var = step_var
-    self.last_update_step = int(self.step_var) - period
+    self.last_update_step = -float("inf")
 
-  def should_update(self):
+  def should_update(self, step_count):
     """ Returns true if it is time to update target model. """
-    return int(self.step_var) - int(self.last_update_step) >= self.period
+    return step_count - self.last_update_step >= self.period
 
-  def update(self):
+  def update(self, step_count):
     """ Updates target model variables with the trained model variables. """
     self.target.load_state_dict(self.model.state_dict())
-    self.last_update_step = int(self.step_var.value)
+    self.last_update_step = step_count
 
 
 def huber_loss(predictions, targets, weights=None):
@@ -32,24 +33,17 @@ def huber_loss(predictions, targets, weights=None):
   return torch.mean(weights * losses)
 
 
-class DQN(BaseAlgorithm):
-  """ Deep Q-Learning algorithm.
+class DQNLoss(Loss):
+  """ Deep Q-Learning algorithm loss function.
 
   See [Mnih et al.](
   https://web.stanford.edu/class/psych209/Readings/MnihEtAlHassibis15NatureControlDeepRL.pdf).
   """
-  # pylint: disable=too-many-arguments
-  def __init__(self, model, target_model, optimizer,
-               gamma=0.99,
-               target_update_period=10_000,
-               double=True,
-               step_var=None):
-    super().__init__(model, optimizer, step_var)
+  def __init__(self, model, target_model, gamma=0.99, double=True, name=None):
+    super().__init__(model, name)
     self.target_model = target_model
     self.gamma = gamma
     self.double = double
-    self.target_updater = TargetUpdater(model, target_model,
-                                        self.step_var, target_update_period)
 
   def make_predictions(self, observations, actions=None):
     """ Applies a model to given observations and selects
@@ -89,9 +83,9 @@ class DQN(BaseAlgorithm):
       targets = rewards[:, t] + (1 - resets[:, t]) * self.gamma * targets
     return targets
 
-  def loss(self, data):
+  def _compute_loss(self, data):
     obs, actions, rewards, resets, next_obs = (
-        torch_from_numpy(data[k], self.device) for k in (
+        self.torch_from_numpy(data[k]) for k in (
             "observations", "actions", "rewards",
             "resets", "next_observations"))
 
@@ -103,16 +97,38 @@ class DQN(BaseAlgorithm):
 
     weights = None
     if "weights" in data:
-      weights = torch_from_numpy(data["weights"], self.device)
+      weights = self.torch_from_numpy(data["weights"])
     loss = huber_loss(qtargets, qvalues, weights=weights)
 
     if summary.should_record():
       summary.add_scalar("dqn/r_squared", r_squared(qtargets, qvalues),
-                         global_step=self.step_var)
-      summary.add_scalar("dqn/loss", loss, global_step=self.step_var)
+                         global_step=self.call_count)
+      summary.add_scalar("dqn/loss", loss, global_step=self.call_count)
     return loss
 
+
+class DQN(Alg):
+  """ Deep Q-Learning algorithm.
+
+  See [Mnih et al.](
+  https://web.stanford.edu/class/psych209/Readings/MnihEtAlHassibis15NatureControlDeepRL.pdf).
+  """
+  def __init__(self, runner, trainer,
+               target_model=None, target_update_period=10_000,
+               name=None, **loss_kwargs):
+    model = runner.policy.model
+    if target_model is None:
+      target_model = runner.policy.model
+      target_update_period = None
+    loss_fn = DQNLoss(runner.policy.model, target_model,
+                      name=name, **loss_kwargs)
+    super().__init__(runner, trainer, loss_fn, name=name)
+    self.target_updater = TargetUpdater(model, target_model,
+                                        target_update_period)
+    self.step_count = 0
+
   def step(self, data):
-    if self.target_updater.should_update():
-      self.target_updater.update()
+    if self.target_updater.should_update(self.step_count):
+      self.target_updater.update(self.step_count)
     super().step(data)
+    self.step_count += 1
