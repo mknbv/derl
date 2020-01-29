@@ -3,16 +3,13 @@ from collections import deque
 from gym import Wrapper
 import numpy as np
 import derl.summary as summary
-from derl.train import StepVariable
 
 
 class RewardSummarizer:
   """ Summarizes rewards received from environment. """
-  def __init__(self, nenvs, prefix, running_mean_size=100, step_var=None):
+  def __init__(self, nenvs, prefix, running_mean_size=100):
     self.prefix = prefix
-    if step_var is None:
-      step_var = StepVariable()
-    self.step_var = step_var
+    self.step_count = 0
     self.had_ended_episodes = np.zeros(nenvs, dtype=np.bool)
     self.rewards = np.zeros(nenvs)
     self.episode_lengths = np.zeros(nenvs)
@@ -35,7 +32,8 @@ class RewardSummarizer:
         np.mean([np.mean(q) for q in self.reward_queues]))
 
     for key, val in summaries.items():
-      summary.add_scalar(f"{self.prefix}/{key}", val, global_step=self.step_var)
+      summary.add_scalar(f"{self.prefix}/{key}", val,
+                         global_step=self.step_count)
 
   def step(self, rewards, resets):
     """ Takes statistics from last env step and tries to add summaries.  """
@@ -50,6 +48,7 @@ class RewardSummarizer:
       self.add_summaries()
       self.episode_lengths.fill(0)
       self.had_ended_episodes.fill(False)
+    self.step_count += self.rewards.shape[0]
 
 
 class Summarize(Wrapper):
@@ -59,14 +58,12 @@ class Summarize(Wrapper):
     self.summarizer = summarizer
 
   @classmethod
-  def reward_summarizer(cls, env, prefix=None, running_mean_size=100,
-                        step_var=None):
+  def reward_summarizer(cls, env, prefix=None, running_mean_size=100):
     """ Creates an instance with reward summarizer. """
     nenvs = getattr(env.unwrapped, "nenvs", 1)
     prefix = prefix if prefix is not None else env.spec.id
     summarizer = RewardSummarizer(nenvs, prefix,
-                                  running_mean_size=running_mean_size,
-                                  step_var=step_var)
+                                  running_mean_size=running_mean_size)
     return cls(env, summarizer)
 
   def step(self, action):
