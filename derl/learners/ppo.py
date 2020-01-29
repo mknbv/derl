@@ -1,5 +1,7 @@
 """ Implements PPO Learner. """
 from torch.optim import Adam
+from derl.alg.common import Trainer
+from derl.anneal import LinearAnneal
 from derl.learners.learner import Learner
 from derl.models import make_model
 from derl.policies import ActorCriticPolicy
@@ -60,17 +62,17 @@ class PPOLearner(Learner):
 
   @staticmethod
   def make_alg(runner, **kwargs):
-    lr = runner.step_var.linear_anneal(
-        kwargs["lr"], kwargs["num_train_steps"], name="lr")
+    lr = LinearAnneal(kwargs["lr"], kwargs["num_train_steps"], name="lr")
     params = runner.policy.model.parameters()
     if "optimizer_epsilon" in kwargs:
-      optimizer = Adam(params, lr, eps=kwargs["optimizer_epsilon"])
+      optimizer = Adam(params, lr.get_tensor(), eps=kwargs["optimizer_epsilon"])
     else:
-      optimizer = Adam(params, lr)
+      optimizer = Adam(params, lr.get_tensor())
+    trainer = Trainer(optimizer, anneals=[lr],
+                      max_grad_norm=kwargs.get("max_grad_norm"))
 
-    ppo_kwargs = {key: kwargs[key]
-                  for key in ["value_loss_coef", "entropy_coef",
-                              "cliprange", "max_grad_norm"]
+    ppo_kwargs = {key: kwargs[key] for key in
+                  ("value_loss_coef", "entropy_coef", "cliprange")
                   if key in kwargs}
-    ppo = PPO(runner.policy, optimizer, **ppo_kwargs)
+    ppo = PPO(runner, trainer, **ppo_kwargs)
     return ppo

@@ -1,30 +1,25 @@
 """ Implements Proximal Policy Optimization algorithm.  """
 import torch
 
-from derl.alg.common import BaseAlgorithm, r_squared, torch_from_numpy
+from derl.alg.common import Alg, Loss, r_squared
 import derl.summary as summary
 
 
-class PPO(BaseAlgorithm):
-  """ Proximal Policy Optimization algorithm.
+class PPOLoss(Loss):
+  """ Proximal Policy Optimization algorithm loss function.
 
   See [Schulman et al., 2017](https://arxiv.org/abs/1707.06347)
   """
-  # pylint: disable=too-many-arguments
-  def __init__(self,
-               policy,
-               optimizer=None,
+  def __init__(self, policy,
                cliprange=0.2,
                value_loss_coef=0.25,
                entropy_coef=0.01,
-               max_grad_norm=0.5,
-               step_var=None):
-    super().__init__(model=policy.model, optimizer=optimizer, step_var=step_var)
+               name=None):
+    super().__init__(model=policy.model, name=name)
     self.policy = policy
     self.cliprange = cliprange
     self.value_loss_coef = value_loss_coef
     self.entropy_coef = entropy_coef
-    self.max_grad_norm = max_grad_norm
 
   def policy_loss(self, trajectory, act=None):
     """ Compute policy loss (including entropy regularization). """
@@ -33,9 +28,9 @@ class PPO(BaseAlgorithm):
     if "advantages" not in trajectory:
       raise ValueError("trajectory does not contain 'advantages'")
 
-    old_log_prob = torch_from_numpy(trajectory["log_prob"], self.device)
-    advantages = torch_from_numpy(trajectory["advantages"], self.device)
-    actions = torch_from_numpy(trajectory["actions"], self.device)
+    old_log_prob = self.torch_from_numpy(trajectory["log_prob"])
+    advantages = self.torch_from_numpy(trajectory["advantages"])
+    actions = self.torch_from_numpy(trajectory["actions"])
 
     log_prob = act["distribution"].log_prob(actions)
     if log_prob.shape != old_log_prob.shape:
@@ -63,7 +58,7 @@ class PPO(BaseAlgorithm):
                        policy_loss=policy_loss,
                        entropy=entropy)
       for key, val in summaries.items():
-        summary.add_scalar(f"ppo/{key}", val, global_step=self.step_var)
+        summary.add_scalar(f"ppo/{key}", val, global_step=self.call_count)
 
     return policy_loss - self.entropy_coef * entropy
 
@@ -74,8 +69,8 @@ class PPO(BaseAlgorithm):
     if "value_targets" not in trajectory:
       raise ValueError("trajectory does not contain 'value_targets'")
 
-    value_targets = torch_from_numpy(trajectory["value_targets"], self.device)
-    old_value_preds = torch_from_numpy(trajectory["values"], self.device)
+    value_targets = self.torch_from_numpy(trajectory["value_targets"])
+    old_value_preds = self.torch_from_numpy(trajectory["values"])
     values = act["values"]
 
     if values.shape != value_targets.shape:
@@ -97,16 +92,30 @@ class PPO(BaseAlgorithm):
                        value_preds=torch.mean(values),
                        r_squared=r_squared(value_targets, values))
       for key, val in summaries.items():
-        summary.add_scalar(f"ppo/{key}", val, global_step=self.step_var)
+        summary.add_scalar(f"ppo/{key}", val, global_step=self.call_count)
     value_loss = torch.mean(value_loss)
     return value_loss
 
-  def loss(self, data):
-    """ Returns ppo loss for given data (trajectory dict). """
+  def _compute_loss(self, data):
     act = self.policy.act(data, training=True)
     policy_loss = self.policy_loss(data, act)
     value_loss = self.value_loss(data, act)
     loss = policy_loss + self.value_loss_coef * value_loss
     if summary.should_record():
-      summary.add_scalar("ppo/loss", loss, global_step=self.step_var)
+      summary.add_scalar("ppo/loss", loss, global_step=self.call_count)
     return loss
+
+
+class PPO(Alg):
+  """ Proximal Policy Optimization algorithm.
+
+  See [Schulman et al., 2017](https://arxiv.org/abs/1707.06347)
+  """
+  def __init__(self, runner, trainer, cliprange=0.2,
+               value_loss_coef=0.25, entropy_coef=0.01,
+               name=None):
+    loss_fn = PPOLoss(runner.policy, cliprange=cliprange,
+                      value_loss_coef=value_loss_coef,
+                      entropy_coef=entropy_coef,
+                      name=name)
+    super().__init__(runner, trainer, loss_fn, name=name)
