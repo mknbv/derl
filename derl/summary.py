@@ -46,6 +46,10 @@ class Summary:
     """ Disables summary recording. """
     self.should_record_fn = const(False)
 
+  def set_recording(self, flag):
+    """ Sets recording on or off depending on boolean flag. """
+    self.should_record_fn = const(flag)
+
   def record_with_period(self, period, step_var):
     """ Automatically start and stop recording with period. """
     self.should_record = PeriodicRecorder(period, step_var)
