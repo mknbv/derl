@@ -48,7 +48,7 @@ class DQNLearner(Learner):
                           init_fn=init_fn, **kwargs)
 
   @staticmethod
-  def make_runner(env, model=None, **kwargs):
+  def make_runner(env, model=None, nlogs=1e5, **kwargs):
     model = model or DQNLearner.make_model(
         env, noisy=kwargs.get("noisy", False),
         dueling=kwargs.get("dueling", True))
@@ -68,7 +68,7 @@ class DQNLearner(Learner):
                                             "nstep", "prioritized")
                      if k in kwargs}
     runner = make_dqn_runner(env, policy, kwargs["num_train_steps"],
-                             anneals=anneals, **runner_kwargs)
+                             anneals=anneals, nlogs=nlogs, **runner_kwargs)
     return runner
 
   @staticmethod

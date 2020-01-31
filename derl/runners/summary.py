@@ -20,10 +20,10 @@ class PeriodicSummaries(RunnerWrapper):
 
   def run(self, obs=None):
     summary.start_recording()
-    self.last_record_step = int(self.runner.step_var)
+    self.last_record_step = self.runner.step_count
     for interactions in self.runner.run(obs):
       yield interactions
-      next_step = int(self.runner.step_var) + 1
+      next_step = self.runner.step_count + 1
       should_record = next_step - self.last_record_step >= self.log_period
       summary.set_recording(should_record)
       if should_record:

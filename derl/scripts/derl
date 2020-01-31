@@ -26,9 +26,10 @@ def main():
       args=unknown_args)
 
   kwargs = vars(args)
+  derl.summary.make_writer(args.logdir)
   env = derl.env.make(args.env_id, kwargs.get("nenvs"), kwargs.get("seed"))
   learner = learner_class.make_with_args(env, args)
-  learner.learn(args.logdir, args.nlogs)
+  learner.learn()
 
 
 if __name__ == "__main__":

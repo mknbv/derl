@@ -2,8 +2,10 @@
 import numpy as np
 
 from derl.runners.env_runner import EnvRunner, RunnerWrapper
-from .trajectory_transforms import (
-    GAE, MergeTimeBatch, NormalizeAdvantages)
+from derl.runners.trajectory_transforms import (GAE,
+                                                MergeTimeBatch,
+                                                NormalizeAdvantages)
+from derl.runners.summary import PeriodicSummaries
 
 
 class TransformInteractions(RunnerWrapper):
@@ -73,7 +75,8 @@ def ppo_runner_wrap(runner, gamma=0.99, lambda_=0.95,
   return runner
 
 
-def make_ppo_runner(env, policy, horizon, nsteps, **wrap_kwargs):
+def make_ppo_runner(env, policy, horizon, nsteps, nlogs=1e5, **wrap_kwargs):
   """ Creates and wraps env runner for PPO training. """
   runner = EnvRunner(env, policy, horizon, nsteps)
+  runner = PeriodicSummaries.make_with_nlogs(runner, nlogs)
   return ppo_runner_wrap(runner, **wrap_kwargs)

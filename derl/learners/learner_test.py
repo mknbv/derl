@@ -11,6 +11,7 @@ class LearnerTestCase(TorchTestCase):
     self.env = None
     self.learner = None
     summary.stop_recording()
+    summary.should_record = lambda *args, **kwargs: False
 
   def assert_interactions(self, fname, ignore_keys=("state", "infos"),
                           rtol=1e-7, atol=0.):
@@ -40,6 +41,6 @@ class LearnerTestCase(TorchTestCase):
     """ Checks that loss values are close to those from the file. """
     expected = np.load(filename)
     for i in range(expected.shape[0]):
-      _, loss = next(self.learner.learning_loop())
+      _, loss = next(self.learner.alg.learn())
       with self.subTest(i=i):
         self.assertAllClose(loss, expected[i], rtol=rtol, atol=atol)

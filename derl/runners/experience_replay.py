@@ -5,6 +5,7 @@ from derl.anneal import LinearAnneal
 from derl.runners.env_runner import EnvRunner, RunnerWrapper
 from derl.runners.onpolicy import TransformInteractions
 from derl.runners.storage import InteractionStorage, PrioritizedStorage
+from derl.runners.summary import PeriodicSummaries
 import derl.summary as summary
 
 
@@ -127,9 +128,10 @@ def dqn_runner_wrap(runner, prioritized=True,
                           batch_size=batch_size)
 
 def make_dqn_runner(env, policy, num_train_steps, steps_per_sample=4,
-                    **wrap_kwargs):
+                    nlogs=1e5, **wrap_kwargs):
   """ Creates experience replay runner as used typically used with DQN alg. """
   runner = EnvRunner(env, policy, horizon=steps_per_sample,
                      nsteps=num_train_steps)
+  runner = PeriodicSummaries.make_with_nlogs(runner, nlogs)
   runner = TransformInteractions(runner)
   return dqn_runner_wrap(runner, **wrap_kwargs)

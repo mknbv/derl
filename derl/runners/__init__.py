@@ -15,6 +15,7 @@ from derl.runners.storage import (
     InteractionStorage,
     PrioritizedStorage,
 )
+from derl.runners.summary import PeriodicSummaries
 from derl.runners.trajectory_transforms import (
     GAE,
     MergeTimeBatch,

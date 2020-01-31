@@ -49,7 +49,7 @@ class PPOLearner(Learner):
     return defaults.get(env_type)
 
   @staticmethod
-  def make_runner(env, model=None, **kwargs):
+  def make_runner(env, model=None, nlogs=1e5, **kwargs):
     model = (model if model is not None
              else make_model(env.observation_space, env.action_space, 1))
     policy = ActorCriticPolicy(model)
@@ -57,7 +57,8 @@ class PPOLearner(Learner):
                      ["gamma", "lambda_", "num_epochs", "num_minibatches"]
                      if key in kwargs}
     runner = make_ppo_runner(env, policy, kwargs["num_runner_steps"],
-                             kwargs["num_train_steps"], **runner_kwargs)
+                             kwargs["num_train_steps"], nlogs=nlogs,
+                             **runner_kwargs)
     return runner
 
   @staticmethod

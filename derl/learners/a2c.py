@@ -8,6 +8,7 @@ from derl.models import make_model
 from derl.policies import ActorCriticPolicy
 from derl.runners.env_runner import EnvRunner
 from derl.runners.onpolicy import TransformInteractions
+from derl.runners.summary import PeriodicSummaries
 from derl.runners.trajectory_transforms import GAE, MergeTimeBatch
 
 
@@ -33,7 +34,7 @@ class A2CLearner(Learner):
     }.get(env_type)
 
   @staticmethod
-  def make_runner(env, model=None, **kwargs):
+  def make_runner(env, model=None, nlogs=1e5, **kwargs):
     if model is None:
       model = make_model(env.observation_space, env.action_space, 1)
     policy = ActorCriticPolicy(model)
@@ -41,6 +42,7 @@ class A2CLearner(Learner):
     gae_kwargs["normalize"] = kwargs.get("normalize_gae", False)
     runner = EnvRunner(env, policy, kwargs["num_runner_steps"],
                        nsteps=kwargs["num_train_steps"])
+    runner = PeriodicSummaries.make_with_nlogs(runner, nlogs)
     transforms = [GAE(policy, **gae_kwargs)]
     if hasattr(env.unwrapped, "nenvs"):
       transforms.append(MergeTimeBatch())
