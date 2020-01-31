@@ -5,22 +5,6 @@ from torch.utils.tensorboard import SummaryWriter
 
 
 
-class PeriodicRecorder:
-  """ Signalizes wether recording should be done with a period. """
-  def __init__(self, period, step_var):
-    self.period = period
-    self.step_var = step_var
-    self.last_record_step = int(self.step_var) - self.period
-
-  def __call__(self):
-    step = int(self.step_var)
-    should_record = (step == self.last_record_step
-                     or step - self.last_record_step >= self.period)
-    if should_record:
-      self.last_record_step = step
-    return should_record
-
-
 def const(value):
   """ Function with constant value. """
   return lambda: value
@@ -49,10 +33,6 @@ class Summary:
   def set_recording(self, flag):
     """ Sets recording on or off depending on boolean flag. """
     self.should_record_fn = const(flag)
-
-  def record_with_period(self, period, step_var):
-    """ Automatically start and stop recording with period. """
-    self.should_record = PeriodicRecorder(period, step_var)
 
   def set_writer(self, summary_writer):
     """ Sets summary writer. """

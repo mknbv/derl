@@ -49,8 +49,8 @@ class ExperienceReplay(RunnerWrapper):
       self.storage.add_batch(*interactions)
       for anneal in self.anneals:
         if summary.should_record():
-          anneal.summarize(self.step_var)
-        anneal.step_to(int(self.runner.step_var))
+          anneal.summarize(self.step_count)
+        anneal.step_to(self.step_count)
       yield self.storage.sample(self.batch_size)
 
 

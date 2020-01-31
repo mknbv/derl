@@ -73,7 +73,7 @@ def ppo_runner_wrap(runner, gamma=0.99, lambda_=0.95,
   return runner
 
 
-def make_ppo_runner(env, policy, horizon, nsteps, step_var=None, **wrap_kwargs):
+def make_ppo_runner(env, policy, horizon, nsteps, **wrap_kwargs):
   """ Creates and wraps env runner for PPO training. """
-  runner = EnvRunner(env, policy, horizon, nsteps, step_var=step_var)
+  runner = EnvRunner(env, policy, horizon, nsteps)
   return ppo_runner_wrap(runner, **wrap_kwargs)

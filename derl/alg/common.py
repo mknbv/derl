@@ -101,7 +101,7 @@ class Alg(ABC):
   def step(self, data):
     """ Performs learning step of the algorithm. """
     loss = self.loss(data)
-    self.trainer.step(loss, self.model, self.name, self.runner.step_var)
+    self.trainer.step(loss, self.model, self.name, self.runner.step_count)
     return loss
 
   def learn(self):

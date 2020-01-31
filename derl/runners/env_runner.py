@@ -1,19 +1,16 @@
 """ Defines environment runner. """
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from derl.train import StepVariable
 
 
 class EnvRunner:
   """ Iterable that interacts with an env. """
-  def __init__(self, env, policy, horizon, nsteps=None, step_var=None):
+  def __init__(self, env, policy, horizon, nsteps=None):
     self.env = env
     self.policy = policy
-    if step_var is None:
-      step_var = StepVariable()
-    self.step_var = step_var
-    self.nsteps = nsteps
     self.horizon = horizon
+    self.nsteps = int(nsteps)
+    self.step_count = 0
 
   @property
   def nenvs(self):
@@ -22,12 +19,12 @@ class EnvRunner:
 
   def is_exhausted(self):
     """ Returns `True` if the runner performed predefined number of steps. """
-    return self.nsteps is not None and int(self.step_var) >= self.nsteps
+    return self.nsteps is not None and self.step_count >= self.nsteps
 
   def __len__(self):
     """ Returns the desired number of steps if it was specified, otherwise
     the current step. """
-    return int(self.nsteps if self.nsteps is not None else self.step_var)
+    return self.nsteps if self.nsteps is not None else self.step_count
 
   def run(self, obs=None):
     """ Interacts with the environment starting from obs for horizon steps. """
@@ -53,7 +50,7 @@ class EnvRunner:
         obs = self.env.reset() if self.nenvs is None and done else new_obs
 
       interactions["state"] = dict(latest_observations=obs)
-      self.step_var.assign_add(self.horizon * (self.nenvs or 1))
+      self.step_count += self.horizon * (self.nenvs or 1)
       yield dict(interactions)
 
 
@@ -61,9 +58,10 @@ class RunnerWrapper(ABC):
   """ Wraps an env runner. """
   def __init__(self, runner):
     self.runner = runner
+    self.unwrapped = getattr(runner, "unwrapped", runner)
 
   def __getattr__(self, attr):
-    if attr not in {"env", "policy", "horizon", "nsteps", "step_var",
+    if attr not in {"env", "policy", "horizon", "nsteps", "step_count",
                     "nenvs", "is_exhausted"}:
       raise AttributeError(f"'{self.__class__.__name__}' "
                            f"has no attribute '{attr}'")
