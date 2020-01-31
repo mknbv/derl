@@ -2,7 +2,6 @@
 from abc import ABC, abstractmethod
 
 import torch
-from derl.anneal import camel2snake
 import derl.summary as summary
 
 
@@ -27,7 +26,7 @@ class Loss(ABC):
     if name is None:
       name = self.__class__.__name__
       name = name[:-len("Loss")] if name.endswith("Loss") else name
-      name = camel2snake(name)
+      name = name.lower()
     self.name = name
     self.call_count = 0
 
@@ -92,7 +91,7 @@ class Alg(ABC):
     self.trainer = trainer
     self.loss_fn = loss_fn
     if name is None:
-      name = camel2snake(self.__class__.__name__)
+      name = self.__class__.__name__.lower()
     self.name = name
 
   def loss(self, data):
