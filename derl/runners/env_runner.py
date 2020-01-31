@@ -1,5 +1,5 @@
 """ Defines environment runner. """
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from collections import defaultdict
 from derl.train import StepVariable
 
@@ -57,7 +57,7 @@ class EnvRunner:
       yield dict(interactions)
 
 
-class RunnerWrapper:
+class RunnerWrapper(ABC):
   """ Wraps an env runner. """
   def __init__(self, runner):
     self.runner = runner
