@@ -26,14 +26,8 @@ class AnnealingVariable(ABC):
     return self.get_tensor().clone()
 
   @abstractmethod
-  def _step_impl(self):
-    """ Implementation of variable update. """
-
   def step(self):
     """ Update the value of the variable. """
-    self.step_count += 1
-    val = self._step_impl()
-    return val
 
   def step_to(self, val):
     """ Updates the value of the variable `val - self.step_count` times. """
@@ -60,7 +54,8 @@ class TorchSched(AnnealingVariable):
   def get_tensor(self):
     return self.tensor
 
-  def _step_impl(self):
+  def step(self):
+    self.step_count += 1
     self.scheduler.step()
     # pylint: disable=not-callable
     self.tensor.data = torch.tensor(self.scheduler.get_last_lr())
@@ -79,7 +74,8 @@ class LinearAnneal(AnnealingVariable):
   def get_tensor(self):
     return self.tensor
 
-  def _step_impl(self):
+  def step(self):
+    self.step_count += 1
     step_frac = self.step_count / self.nsteps
     self.tensor.data = torch.clamp(
         # pylint: disable=not-callable
