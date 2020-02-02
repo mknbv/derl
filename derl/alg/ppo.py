@@ -96,13 +96,14 @@ class PPOLoss(Loss):
     value_loss = torch.mean(value_loss)
     return value_loss
 
-  def _compute_loss(self, data):
+  def __call__(self, data):
     act = self.policy.act(data, training=True)
     policy_loss = self.policy_loss(data, act)
     value_loss = self.value_loss(data, act)
     loss = policy_loss + self.value_loss_coef * value_loss
     if summary.should_record():
       summary.add_scalar("ppo/loss", loss, global_step=self.call_count)
+    self.call_count += 1
     return loss
 
 

@@ -67,7 +67,7 @@ class A2CLoss(Loss):
 
     return value_loss
 
-  def _compute_loss(self, data):
+  def __call__(self, data):
     act = self.policy.act(data, training=True)
     policy_loss = self.policy_loss(data, act)
     value_loss = self.value_loss(data, act)
@@ -75,6 +75,7 @@ class A2CLoss(Loss):
     if summary.should_record():
       summary.add_scalar(f"{self.name}/loss", loss,
                          global_step=self.call_count)
+    self.call_count += 1
     return loss
 
 

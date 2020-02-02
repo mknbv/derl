@@ -40,14 +40,8 @@ class Loss(ABC):
     return torch.from_numpy(arr).to(device=self.device)
 
   @abstractmethod
-  def _compute_loss(self, data):
-    """ Implements loss value computation. """
-
   def __call__(self, data):
     """ Computes and returns loss value on given data. """
-    loss = self._compute_loss(data)
-    self.call_count += 1
-    return loss
 
 
 class Trainer(ABC):

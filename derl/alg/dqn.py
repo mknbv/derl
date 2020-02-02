@@ -83,7 +83,7 @@ class DQNLoss(Loss):
       targets = rewards[:, t] + (1 - resets[:, t]) * self.gamma * targets
     return targets
 
-  def _compute_loss(self, data):
+  def __call__(self, data):
     obs, actions, rewards, resets, next_obs = (
         self.torch_from_numpy(data[k]) for k in (
             "observations", "actions", "rewards",
@@ -104,6 +104,7 @@ class DQNLoss(Loss):
       summary.add_scalar("dqn/r_squared", r_squared(qtargets, qvalues),
                          global_step=self.call_count)
       summary.add_scalar("dqn/loss", loss, global_step=self.call_count)
+    self.call_count += 1
     return loss
 
 
