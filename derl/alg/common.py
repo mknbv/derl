@@ -1,5 +1,6 @@
 """ Defines algorithm base class and various utils. """
 from abc import ABC, abstractmethod
+from functools import partial
 
 import torch
 import derl.summary as summary
@@ -63,18 +64,17 @@ class Trainer(ABC):
       summary.add_scalar(f"{name}/grad_norm", grad_norm,
                          global_step=self.step_count)
 
-  def step(self, loss, model, name, step_var):
+  def step(self, alg):
     """ Performs single training step of a given algorithm. """
-    loss.backward()
-    self.preprocess_gradients(model.parameters(), name)
+    alg.accumulate_gradients()
+    self.preprocess_gradients(alg.model.parameters(), alg.name)
     for anneal in self.anneals:
       if summary.should_record():
-        anneal.summarize(step_var)
-      anneal.step_to(int(step_var))
+        anneal.summarize(alg.runner.step_count)
+      anneal.step_to(alg.runner.step_count)
     self.optimizer.step()
     self.optimizer.zero_grad()
     self.step_count += 1
-    return loss
 
 
 class Alg(ABC):
@@ -92,10 +92,17 @@ class Alg(ABC):
     """ Computes and returns the loss function on data. """
     return self.loss_fn(data)
 
+  def accumulate_gradients(self, loss):
+    """ Accumulates gradients in models parameters. """
+    # pylint: disable=no-self-use
+    loss.backward()
+
   def step(self, data):
     """ Performs learning step of the algorithm. """
     loss = self.loss(data)
-    self.trainer.step(loss, self.model, self.name, self.runner.step_count)
+    self.accumulate_gradients = partial(self.accumulate_gradients, loss)
+    self.trainer.step(self)
+    self.accumulate_gradients = self.accumulate_gradients.func
     return loss
 
   def learn(self):
