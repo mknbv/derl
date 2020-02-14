@@ -1,6 +1,11 @@
 """ All derl imports. """
 from . import env
 from .alg import *
+from .anneal import (
+    AnnealingVariable,
+    TorchSched,
+    LinearAnneal,
+)
 from .learners import *
 from .runners import (
     EnvRunner,
@@ -26,7 +31,7 @@ from .models import (
     NatureCNNModel,
     MLP,
     MuJoCoModel,
-    make_model
+    make_model,
 )
 from .policies import (
     Policy,
