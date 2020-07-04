@@ -45,7 +45,7 @@ class Loss(ABC):
     """ Computes and returns loss value on given data. """
 
 
-class Trainer(ABC):
+class Trainer:
   """ Class to perform algorithm training. """
   def __init__(self, optimizer, anneals=None, max_grad_norm=None):
     self.optimizer = optimizer
@@ -77,7 +77,7 @@ class Trainer(ABC):
     self.step_count += 1
 
 
-class Alg(ABC):
+class Alg:
   """ Generic learning algorithm specified by its loss function. """
   def __init__(self, runner, trainer, loss_fn, name=None):
     self.runner = runner
