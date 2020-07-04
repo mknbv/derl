@@ -1,5 +1,4 @@
 """ Implements Deep Q-Learning Learner. """
-from copy import deepcopy
 from torch.optim import RMSprop
 from derl.alg.common import Trainer
 from derl.alg.dqn import DQN
@@ -74,8 +73,6 @@ class DQNLearner(Learner):
   @staticmethod
   def make_alg(runner, **kwargs):
     model = runner.policy.model
-    target_model = deepcopy(model)
-
     optimizer_kwargs = {
         "alpha": kwargs.get("decay", 0.95),
         "momentum": kwargs.get("momentum", 0.),
@@ -85,5 +82,5 @@ class DQNLearner(Learner):
     trainer = Trainer(optimizer)
     dqn_kwargs = {k: kwargs[k] for k in
                   ("gamma", "target_update_period", "double") if k in kwargs}
-    alg = DQN(runner, trainer, target_model, **dqn_kwargs)
+    alg = DQN(runner, trainer, **dqn_kwargs)
     return alg

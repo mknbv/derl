@@ -1,4 +1,5 @@
 """ Deep Q-learning algorithm implementation. """
+from copy import deepcopy
 import torch
 import torch.nn.functional as F
 from derl.alg.common import Loss, Alg, r_squared
@@ -119,9 +120,8 @@ class DQN(Alg):
                name=None, **loss_kwargs):
     model = runner.policy.model
     if target_model is None:
-      target_model = runner.policy.model
-      target_update_period = None
-    loss_fn = DQNLoss(runner.policy.model, target_model,
+      target_model = deepcopy(model)
+    loss_fn = DQNLoss(model, target_model,
                       name=name, **loss_kwargs)
     super().__init__(runner, trainer, loss_fn, name=name)
     self.target_updater = TargetUpdater(model, target_model,
