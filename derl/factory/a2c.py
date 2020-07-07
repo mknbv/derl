@@ -14,6 +14,9 @@ from derl.runners.trajectory_transforms import GAE, MergeTimeBatch
 
 class A2CFactory(Factory):
   """ Advantage Actor-Critic Learner. """
+  def __init__(self, *, unused_kwargs=("nenvs",), **kwargs):
+    super().__init__(unused_kwargs=unused_kwargs, **kwargs)
+
   @staticmethod
   def get_parser_defaults(args_type="atari"):
     return {

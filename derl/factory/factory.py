@@ -6,8 +6,10 @@ from derl.scripts.parsers import get_defaults_parser
 
 class Factory(ABC):
   """ Factory to construct learning algorithms. """
-  def __init__(self, **kwargs):
+  def __init__(self, *, unused_kwargs=None, **kwargs):
     self.kwargs = kwargs
+    self.allowed_unused_kwargs = set(unused_kwargs) if unused_kwargs else set()
+    self.unused_kwargs = set(self.kwargs)
 
   @staticmethod
   def get_parser_defaults(args_type="atari"):
@@ -22,24 +24,37 @@ class Factory(ABC):
     return vars(args)
 
   @classmethod
-  def from_args(cls, args_type="atari", args=None):
+  def with_default_kwargs(cls, args_type="atari", unused_kwargs=None, **kwargs):
+    """ Creates instance with default keyword arguments. """
+    default_kwargs = cls.get_kwargs(args_type)
+    default_kwargs.update(kwargs)
+    return cls(unused_kwargs=unused_kwargs, **default_kwargs)
+
+  @classmethod
+  def from_args(cls, args_type="atari", unused_kwargs=None, args=None):
     """ Creates factory after parsing command line arguments. """
     defaults = cls.get_parser_defaults(args_type)
     parser = get_defaults_parser(defaults)
     args = parser.parse_args(args)
-    return cls(**vars(args))
+    return cls(unused_kwargs=unused_kwargs, **vars(args))
 
   def has_arg(self, name):
     """ Returns bool indicating whether the factory has argument with name. """
-    return name in self.kwargs
+    result = name in self.kwargs
+    self.unused_kwargs.discard(name)
+    return result
 
   def get_arg(self, name):
     """ Returns argument value. """
-    return self.kwargs[name]
+    result = self.kwargs[name]
+    self.unused_kwargs.discard(name)
+    return result
 
   def get_arg_default(self, name, default=None):
     """ Returns argument value or default if it was not specified. """
-    return self.kwargs.get(name, default)
+    result = self.kwargs.get(name, default)
+    self.unused_kwargs.discard(name)
+    return result
 
   def get_arg_list(self, *names):
     """ Returns list of argument values. """
@@ -57,7 +72,7 @@ class Factory(ABC):
 
   @contextmanager
   def custom_kwargs(self, **kwargs):
-    """ Custom keyword arguments context manager. """
+    """ Custom keyword arguments context. """
     init_kwargs = self.kwargs
     self.kwargs = {name: kwargs[name] if name in kwargs else self.kwargs[name]
                    for name in set(self.kwargs) | set(kwargs)}
@@ -78,10 +93,18 @@ class Factory(ABC):
   def make_alg(self, runner, trainer, **kwargs):
     """ Creates and returns alg instance with specified runner and trainer. """
 
-  def make(self, env, **kwargs):
+  def make(self, env, check_kwargs=True, **kwargs):
     """ Creates and returns algorithm instance. """
     with self.custom_kwargs(**kwargs):
       runner = self.make_runner(env)
       trainer = self.make_trainer(runner)
       alg = self.make_alg(runner, trainer)
+      if check_kwargs and self.unused_kwargs - self.allowed_unused_kwargs:
+        raise ValueError(
+            "constructing target object does not use all keyword arguments, "
+            "unused keyword arguments are: "
+            f"{self.unused_kwargs - self.allowed_unused_kwargs};"
+            "if this is expected, consider adding them to unused_kwargs "
+            "during factory construction or passing "
+            "`check_kwargs=False` to this method.")
       return alg

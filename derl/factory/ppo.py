@@ -11,6 +11,9 @@ from derl.runners.onpolicy import make_ppo_runner
 
 class PPOFactory(Factory):
   """ Proximal Policy Optimization learner. """
+  def __init__(self, *, unused_kwargs=("nenvs",), **kwargs):
+    super().__init__(unused_kwargs=unused_kwargs, **kwargs)
+
   @staticmethod
   def get_parser_defaults(args_type="atari"):
     defaults = {

@@ -68,6 +68,10 @@ class DQNFactory(Factory):
       runner_kwargs = self.get_arg_dict("storage_size", "storage_init_size",
                                         "batch_size", "steps_per_sample",
                                         "nstep", "prioritized")
+      if self.has_arg("per_alpha"):
+        runner_kwargs["alpha"] = self.get_arg("per_alpha")
+      if self.has_arg("per_beta"):
+        runner_kwargs["beta"] = self.get_arg("per_beta")
       runner = make_dqn_runner(env, policy, self.get_arg("num_train_steps"),
                                anneals=anneals, nlogs=nlogs, **runner_kwargs)
       return runner
@@ -76,8 +80,8 @@ class DQNFactory(Factory):
     with self.custom_kwargs(**kwargs):
       model = runner.policy.model
       optimizer_kwargs = {
-          "alpha": self.get_arg_default("decay", 0.95),
-          "momentum": self.get_arg_default("momentum", 0.),
+          "alpha": self.get_arg_default("optimizer_decay", 0.95),
+          "momentum": self.get_arg_default("optimizer_momentum", 0.),
           "eps": self.get_arg_default("optimizer_epsilon", 0.01)
       }
       optimizer = RMSprop(model.parameters(), self.get_arg("lr"),
