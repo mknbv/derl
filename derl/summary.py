@@ -52,8 +52,8 @@ class Summary:
         return getattr(self.writer, func.__name__)(*args, **kwargs)
       return wrapped
 
-    for func in (value for name, value in getmembers(SummaryWriter)
-                 if isfunction(value)):
+    for func in (member for name, member
+                 in getmembers(SummaryWriter, isfunction)):
       setattr(self, func.__name__, wrap_func(func))
     del self.__class__.set_writer_functions
 
