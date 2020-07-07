@@ -37,6 +37,10 @@ class Factory(ABC):
     """ Returns argument value. """
     return self.kwargs[name]
 
+  def get_arg_default(self, name, default=None):
+    """ Returns argument value or default if it was not specified. """
+    return self.kwargs.get(name, default)
+
   def get_arg_list(self, *names):
     """ Returns list of argument values. """
     return [self.get_arg(name) for name in names]
