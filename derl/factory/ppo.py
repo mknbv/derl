@@ -50,6 +50,15 @@ class PPOFactory(Factory):
     }
     return defaults.get(args_type)
 
+  @classmethod
+  def with_default_kwargs(cls, args_type="atari", unused_kwargs=("nenvs",),
+                          **kwargs):
+    return super().with_default_kwargs(args_type, unused_kwargs, **kwargs)
+
+  @classmethod
+  def from_args(cls, args_type="atari", unused_kwargs=("nenvs",), args=None):
+    return super().from_args(args_type, unused_kwargs, args)
+
   def make_runner(self, env, nlogs=1e5, **kwargs):
     with self.custom_kwargs(**kwargs):
       model = (self.get_arg("model") if self.has_arg("model")
