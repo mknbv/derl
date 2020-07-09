@@ -37,10 +37,20 @@ class LearnerTestCase(TorchTestCase):
         self.assertAllClose(param.grad, expected[f"grad_{i}"],
                             rtol=rtol, atol=atol)
 
+  def save_losses(self, filename, *, num):
+    """ Saves losses to file with specified name. """
+    losses = []
+    learning_iter = self.learner.alg.learn()
+    for _ in range(num):
+      _, loss = next(learning_iter)
+      losses.append(loss.detach().numpy())
+    np.save(filename, np.asarray(losses))
+
   def assert_losses(self, filename, rtol=1e-6, atol=0.):
     """ Checks that loss values are close to those from the file. """
     expected = np.load(filename)
+    learning_iter = self.learner.alg.learn()
     for i in range(expected.shape[0]):
-      _, loss = next(self.learner.alg.learn())
+      _, loss = next(learning_iter)
       with self.subTest(i=i):
         self.assertAllClose(loss, expected[i], rtol=rtol, atol=atol)
