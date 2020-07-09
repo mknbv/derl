@@ -40,7 +40,8 @@ class AlgTestCase(TorchTestCase):
   def assert_losses(self, filename, rtol=1e-6, atol=0.):
     """ Checks that loss values are close to those from the file. """
     expected = np.load(filename)
+    data_iter = self.alg.runner.run()
     for i in range(expected.shape[0]):
-      _, loss = next(self.alg.learn())
+      loss = self.alg.step(next(data_iter))
       with self.subTest(i=i):
         self.assertAllClose(loss, expected[i], rtol=rtol, atol=atol)
