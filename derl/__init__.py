@@ -6,7 +6,7 @@ from .anneal import (
     TorchSched,
     LinearAnneal,
 )
-from .learners import *
+from .factory import *
 from .runners import (
     EnvRunner,
     RunnerWrapper,

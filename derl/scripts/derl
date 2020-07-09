@@ -1,35 +1,36 @@
-""" Generic derl script to launch a learner. """
+""" Generic derl script to launch an algorithm. """
 #!/usr/bin/env python3
 from argparse import ArgumentParser
 import derl
 
 
-def get_learners():
-  """ Returns learner name to learner class mapping. """
+def get_factories():
+  """ Returns factory name to factory class mapping. """
   return {
-      k[:-len("Learner")].lower().replace("_", "-"): getattr(derl, k)
-      for k in dir(derl) if k != "Learner" and k.endswith("Learner")
+      k[:-len("Factory")].lower().replace("_", "-"): getattr(derl, k)
+      for k in dir(derl) if k != "Factory" and k.endswith("Factory")
   }
 
 
 def main():
   """ Script entry point. """
   parser = ArgumentParser()
-  learners = get_learners()
-  parser.add_argument("learner", choices=list(learners.keys()))
+  factories = get_factories()
+  parser.add_argument("factory", choices=list(factories.keys()))
   args, unknown_args = parser.parse_known_args()
-  learner_class = learners[args.learner]
+  factory_class = factories[args.factory]
 
   args = derl.get_args(
-      atari_defaults=learner_class.get_parser_defaults("atari"),
-      mujoco_defaults=learner_class.get_parser_defaults("mujoco"),
+      atari_defaults=factory_class.get_parser_defaults("atari"),
+      mujoco_defaults=factory_class.get_parser_defaults("mujoco"),
       args=unknown_args)
 
   kwargs = vars(args)
   derl.summary.make_writer(args.logdir)
   env = derl.env.make(args.env_id, kwargs.get("nenvs"), kwargs.get("seed"))
-  learner = learner_class.make_with_args(env, args)
-  learner.learn()
+  alg = factory_class(unused_kwargs=("env_id", "nenvs", "logdir", "nlogs"),
+                      **kwargs).make(env, nlogs=args.nlogs)
+  alg.learn()
 
 
 if __name__ == "__main__":

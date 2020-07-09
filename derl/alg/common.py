@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from functools import partial
 
 import torch
+from tqdm import tqdm
 import derl.summary as summary
 
 
@@ -107,6 +108,7 @@ class Alg:
 
   def learn(self):
     """ Performs learning with this algorithm. """
-    for data in self.runner.run():
-      loss = self.step(data)
-      yield data, loss
+    with tqdm(total=len(self.runner)) as pbar:
+      for data in self.runner.run():
+        pbar.update(self.runner.step_count - pbar.n)
+        self.step(data)
