@@ -93,10 +93,10 @@ class Factory(ABC):
   def make_alg(self, runner, trainer, **kwargs):
     """ Creates and returns alg instance with specified runner and trainer. """
 
-  def make(self, env, check_kwargs=True, **kwargs):
+  def make(self, env, nlogs=1e5, check_kwargs=True, **kwargs):
     """ Creates and returns algorithm instance. """
     with self.custom_kwargs(**kwargs):
-      runner = self.make_runner(env)
+      runner = self.make_runner(env, nlogs=nlogs)
       trainer = self.make_trainer(runner)
       alg = self.make_alg(runner, trainer)
       if check_kwargs and self.unused_kwargs - self.allowed_unused_kwargs:
