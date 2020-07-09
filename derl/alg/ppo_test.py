@@ -5,7 +5,7 @@ from derl.factory.ppo import PPOFactory
 from derl.alg.test import AlgTestCase
 
 
-class PPOLearnerAtariTest(AlgTestCase):
+class PPOAtariTest(AlgTestCase):
   def setUp(self):
     super().setUp()
 
@@ -28,7 +28,7 @@ class PPOLearnerAtariTest(AlgTestCase):
     self.assert_losses("testdata/ppo/atari/losses.npy", rtol=1e-5, atol=1e-5)
 
 
-class PPOLearnerPyBulletTest(AlgTestCase):
+class PPOPyBulletTest(AlgTestCase):
   def setUp(self):
     super().setUp()
 

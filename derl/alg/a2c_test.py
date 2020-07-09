@@ -5,7 +5,7 @@ from derl.factory.a2c import A2CFactory
 from derl.alg.test import AlgTestCase
 
 
-class A2CLearnerTest(AlgTestCase):
+class A2CTest(AlgTestCase):
   def setUp(self):
     super().setUp()
 

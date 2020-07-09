@@ -4,7 +4,7 @@ from derl.factory.dqn import DQNFactory
 from derl.alg.test import AlgTestCase
 
 
-class DQNLearnerTest(AlgTestCase):
+class DQNTest(AlgTestCase):
   def setUp(self):
     super().setUp()
 
