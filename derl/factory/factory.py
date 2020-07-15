@@ -107,4 +107,5 @@ class Factory(ABC):
             "if this is expected, consider adding them to unused_kwargs "
             "during factory construction or passing "
             "`check_kwargs=False` to this method.")
-      return alg
+    self.unused_kwargs = set(self.kwargs)
+    return alg
