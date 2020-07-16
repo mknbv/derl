@@ -4,6 +4,58 @@ from contextlib import contextmanager
 from derl.scripts.parsers import get_defaults_parser
 
 
+class KwargsDict:
+  """ Key-word arguments dictionary. """
+  def __init__(self, **kwargs):
+    self.kwargs = kwargs
+    self.unused = set(self.kwargs)
+
+  def has_arg(self, key):
+    """ Return true if this kwargs dict has key. """
+    self.unused.discard(key)
+    return key in self.kwargs
+
+  def get_arg(self, key):
+    """ Returns argument under key. """
+    self.unused.discard(key)
+    return self.kwargs[key]
+
+  def get_arg_default(self, key, default=None):
+    """ Returns argument under key if it was specified or default otherwise. """
+    if key not in self.kwargs:
+      return default
+    return self.get_arg(key)
+
+  def get_arg_list(self, *keys):
+    """ Returns list of arguments under specified keys. """
+    return [self.get_arg(key) for key in keys]
+
+  def get_arg_dict(self, *keys, check_exists=True):
+    """ Returns dictionary of arugments under specified keys. """
+    return {key: self.get_arg(key) for key in keys
+            if not check_exists or self.has_arg(key)}
+
+  @contextmanager
+  def override_context(self, **kwargs):
+    """ Context manager for overriding kwargs. """
+    init_kwargs = dict(self.kwargs)
+    for key, val in kwargs.items():
+      self.kwargs[key] = val
+      self.unused.add(key)
+    try:
+      yield
+    finally:
+      custom_unused = set(self.unused) & set(kwargs)
+      if custom_unused:
+        raise ValueError("not all custom kwargs were used in this context, "
+                         f"unused kwargs are {custom_unused}")
+      self.kwargs = init_kwargs
+
+  def reset_unused(self):
+    """ Adds all kwargs to the unused collection. """
+    self.unused = set(self.kwargs)
+
+
 class Factory(ABC):
   """ Factory to construct learning algorithms. """
   def __init__(self, *, unused_kwargs=None, **kwargs):
