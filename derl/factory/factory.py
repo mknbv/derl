@@ -12,9 +12,9 @@ class Factory(ABC):
     self.unused_kwargs = set(self.kwargs)
 
   @staticmethod
+  @abstractmethod
   def get_parser_defaults(args_type="atari"):
     """ Returns default argument dictionary for argument parsing. """
-    return {}.get(args_type, {})
 
   @classmethod
   def get_kwargs(cls, args_type="atari"):
