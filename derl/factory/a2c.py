@@ -14,8 +14,8 @@ from derl.runners.trajectory_transforms import GAE, MergeTimeBatch
 
 class A2CFactory(Factory):
   """ Advantage Actor-Critic Learner. """
-  def __init__(self, *, unused_kwargs=("nenvs",), **kwargs):
-    super().__init__(unused_kwargs=unused_kwargs, **kwargs)
+  def __init__(self, *, ignore_unused=("nenvs",), **kwargs):
+    super().__init__(ignore_unused=ignore_unused, **kwargs)
 
   @staticmethod
   def get_parser_defaults(args_type="atari"):
@@ -37,16 +37,16 @@ class A2CFactory(Factory):
     }.get(args_type)
 
   @classmethod
-  def with_default_kwargs(cls, args_type="atari", unused_kwargs=("nenvs",),
+  def from_default_kwargs(cls, args_type="atari", ignore_unused=("nenvs",),
                           **kwargs):
-    return super().with_default_kwargs(args_type, unused_kwargs, **kwargs)
+    return super().from_default_kwargs(args_type, ignore_unused, **kwargs)
 
   @classmethod
-  def from_args(cls, args_type="atari", unused_kwargs=("nenvs",), args=None):
-    return super().from_args(args_type, unused_kwargs, args)
+  def from_args(cls, args_type="atari", ignore_unused=("nenvs",), args=None):
+    return super().from_args(args_type, ignore_unused, args)
 
   def make_runner(self, env, nlogs=1e5, **kwargs):
-    with self.custom_kwargs(**kwargs):
+    with self.override_context(**kwargs):
       model = (self.get_arg("model") if self.has_arg("model")
                else make_model(env.observation_space, env.action_space, 1))
       policy = ActorCriticPolicy(model)
@@ -62,7 +62,7 @@ class A2CFactory(Factory):
       return runner
 
   def make_trainer(self, runner, **kwargs):
-    with self.custom_kwargs(**kwargs):
+    with self.override_context(**kwargs):
       lr = LinearAnneal(self.get_arg("lr"), self.get_arg("num_train_steps"),
                         0., name="lr")
       optimizer_kwargs = {
@@ -75,6 +75,6 @@ class A2CFactory(Factory):
                      max_grad_norm=self.get_arg_default("max_grad_norm"))
 
   def make_alg(self, runner, trainer, **kwargs):
-    with self.custom_kwargs(**kwargs):
+    with self.override_context(**kwargs):
       a2c_kwargs = self.get_arg_dict("value_loss_coef", "entropy_coef")
       return A2C(runner, trainer, **a2c_kwargs)

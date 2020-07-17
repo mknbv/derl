@@ -28,7 +28,7 @@ def main():
   kwargs = vars(args)
   derl.summary.make_writer(args.logdir)
   env = derl.env.make(args.env_id, kwargs.get("nenvs"), kwargs.get("seed"))
-  alg = factory_class(unused_kwargs=("env_id", "nenvs", "logdir", "nlogs"),
+  alg = factory_class(ignore_unused=("env_id", "nenvs", "logdir", "nlogs"),
                       **kwargs).make(env, nlogs=args.nlogs)
   alg.learn()
 

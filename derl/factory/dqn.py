@@ -41,7 +41,7 @@ class DQNFactory(Factory):
 
   def make_model(self, env, init_fn=None, **kwargs):
     """ Creates Nature-DQN model for a given env. """
-    with self.custom_kwargs(**kwargs):
+    with self.override_context(**kwargs):
       model_kwargs = self.get_arg_dict("noisy", "dueling", "nbins")
       return NatureCNNModel(input_shape=env.observation_space.shape,
                             output_units=env.action_space.n,
@@ -49,7 +49,7 @@ class DQNFactory(Factory):
                             init_fn=init_fn)
 
   def make_runner(self, env, nlogs=1e5, **kwargs):
-    with self.custom_kwargs():
+    with self.override_context():
       noisy = self.get_arg_default("noisy", False)
       model = (self.get_arg("model") if self.has_arg("model") else
                self.make_model(env, noisy=noisy,
@@ -77,7 +77,7 @@ class DQNFactory(Factory):
       return runner
 
   def make_trainer(self, runner, **kwargs):
-    with self.custom_kwargs(**kwargs):
+    with self.override_context(**kwargs):
       model = runner.policy.model
       optimizer_kwargs = {
           "alpha": self.get_arg_default("optimizer_decay", 0.95),
@@ -89,7 +89,7 @@ class DQNFactory(Factory):
       return Trainer(optimizer)
 
   def make_alg(self, runner, trainer, **kwargs):
-    with self.custom_kwargs():
+    with self.override_context():
       dqn_kwargs = self.get_arg_dict("gamma", "target_update_period", "double")
       alg = DQN(runner, trainer, **dqn_kwargs)
       return alg

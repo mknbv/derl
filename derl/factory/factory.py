@@ -58,10 +58,12 @@ class KwargsDict:
 
 class Factory(ABC):
   """ Factory to construct learning algorithms. """
-  def __init__(self, *, unused_kwargs=None, **kwargs):
-    self.kwargs = kwargs
-    self.allowed_unused_kwargs = set(unused_kwargs) if unused_kwargs else set()
-    self.unused_kwargs = set(self.kwargs)
+  def __init__(self, *, ignore_unused=None, **kwargs):
+    self.kwargs = KwargsDict(**kwargs)
+    self.ignore_unused = set(ignore_unused) if ignore_unused else set()
+
+  def __getattr__(self, name):
+    return getattr(self.kwargs, name)
 
   @staticmethod
   @abstractmethod
@@ -76,62 +78,19 @@ class Factory(ABC):
     return vars(args)
 
   @classmethod
-  def with_default_kwargs(cls, args_type="atari", unused_kwargs=None, **kwargs):
+  def from_default_kwargs(cls, args_type="atari", ignore_unused=None, **kwargs):
     """ Creates instance with default keyword arguments. """
     default_kwargs = cls.get_kwargs(args_type)
     default_kwargs.update(kwargs)
-    return cls(unused_kwargs=unused_kwargs, **default_kwargs)
+    return cls(ignore_unused=ignore_unused, **default_kwargs)
 
   @classmethod
-  def from_args(cls, args_type="atari", unused_kwargs=None, args=None):
+  def from_args(cls, args_type="atari", ignore_unused=None, args=None):
     """ Creates factory after parsing command line arguments. """
     defaults = cls.get_parser_defaults(args_type)
     parser = get_defaults_parser(defaults)
     args = parser.parse_args(args)
-    return cls(unused_kwargs=unused_kwargs, **vars(args))
-
-  def has_arg(self, name):
-    """ Returns bool indicating whether the factory has argument with name. """
-    result = name in self.kwargs
-    self.unused_kwargs.discard(name)
-    return result
-
-  def get_arg(self, name):
-    """ Returns argument value. """
-    result = self.kwargs[name]
-    self.unused_kwargs.discard(name)
-    return result
-
-  def get_arg_default(self, name, default=None):
-    """ Returns argument value or default if it was not specified. """
-    result = self.kwargs.get(name, default)
-    self.unused_kwargs.discard(name)
-    return result
-
-  def get_arg_list(self, *names):
-    """ Returns list of argument values. """
-    return [self.get_arg(name) for name in names]
-
-  def get_arg_dict(self, *names, check_exists=True):
-    """ Returns dictionary of arguments. """
-    return {name: self.get_arg(name) for name in names
-            if not check_exists or self.has_arg(name)}
-
-  def set_arg(self, **kwargs):
-    """ Sets value of keyword argument. """
-    for name, val in kwargs.items():
-      self.kwargs[name] = val
-
-  @contextmanager
-  def custom_kwargs(self, **kwargs):
-    """ Custom keyword arguments context. """
-    init_kwargs = self.kwargs
-    self.kwargs = {name: kwargs[name] if name in kwargs else self.kwargs[name]
-                   for name in set(self.kwargs) | set(kwargs)}
-    try:
-      yield
-    finally:
-      self.kwargs = init_kwargs
+    return cls(ignore_unused=ignore_unused, **vars(args))
 
   @abstractmethod
   def make_runner(self, env, nlogs=1e5, **kwargs):
@@ -147,17 +106,17 @@ class Factory(ABC):
 
   def make(self, env, nlogs=1e5, check_kwargs=True, **kwargs):
     """ Creates and returns algorithm instance. """
-    with self.custom_kwargs(**kwargs):
+    with self.override_context(**kwargs):
       runner = self.make_runner(env, nlogs=nlogs)
       trainer = self.make_trainer(runner)
       alg = self.make_alg(runner, trainer)
-      if check_kwargs and self.unused_kwargs - self.allowed_unused_kwargs:
+      if check_kwargs and self.kwargs.unused - self.ignore_unused:
         raise ValueError(
             "constructing target object does not use all keyword arguments, "
             "unused keyword arguments are: "
-            f"{self.unused_kwargs - self.allowed_unused_kwargs};"
-            "if this is expected, consider adding them to unused_kwargs "
+            f"{self.kwargs.unused - self.ignore_unused};"
+            "if this is expected, consider adding them to ignore_unused "
             "during factory construction or passing "
             "`check_kwargs=False` to this method.")
-    self.unused_kwargs = set(self.kwargs)
+    self.kwargs.reset_unused()
     return alg
