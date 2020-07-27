@@ -49,7 +49,7 @@ class DQNFactory(Factory):
                             init_fn=init_fn)
 
   def make_runner(self, env, nlogs=1e5, **kwargs):
-    with self.override_context():
+    with self.override_context(**kwargs):
       noisy = self.get_arg_default("noisy", False)
       model = (self.get_arg("model") if self.has_arg("model") else
                self.make_model(env, noisy=noisy,
