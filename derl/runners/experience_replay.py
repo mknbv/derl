@@ -115,17 +115,16 @@ class PrioritizedExperienceReplay(ExperienceReplay):
 
 def dqn_runner_wrap(runner, prioritized=True,
                     storage_size=1_000_000, storage_init_size=50_000,
-                    batch_size=32, nstep=3, **prioritized_kwargs):
+                    batch_size=32, nstep=3, **kwargs):
   """ Wraps runner as it is typically used with DQN alg. """
   if prioritized:
     storage = PrioritizedStorage(storage_size, nstep)
     return PrioritizedExperienceReplay(
-        runner, storage, **prioritized_kwargs,
-        storage_init_size=storage_init_size,
-        batch_size=batch_size)
+        runner, storage, storage_init_size=storage_init_size,
+        batch_size=batch_size, **kwargs)
   storage = InteractionStorage(storage_size, nstep)
   return ExperienceReplay(runner, storage, storage_init_size=storage_init_size,
-                          batch_size=batch_size)
+                          batch_size=batch_size, **kwargs)
 
 def make_dqn_runner(env, policy, num_train_steps, steps_per_sample=4,
                     nlogs=1e5, **wrap_kwargs):
