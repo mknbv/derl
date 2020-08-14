@@ -12,6 +12,7 @@ setup(
     scripts=["derl/scripts/derl"],
     install_requires=[
         "gym[atari]>=0.11",
+        "pybullet",
         "numpy",
         "opencv-python",
         "tensorboard==1.14",

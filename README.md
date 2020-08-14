@@ -31,9 +31,8 @@ git clone https://github.com/MichaelKonobeev/derl.git
 pip install -e derl
 ```
 
-`gym[atari]` will be installed by `setup.py`, but you will need
-to install other environment requirements (e.g. to use mujoco or pybullet)
-separately.
+`gym[atari]` and `pybullet` will be installed by `setup.py`, but you will need
+to install other environment requirements such as mujoco manually.
 
 Now you can run training:
 
