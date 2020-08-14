@@ -13,7 +13,7 @@ setup(
     install_requires=[
         "gym[atari]>=0.11",
         "pybullet",
-        "numpy",
+        "numpy==1.16.4",
         "opencv-python",
         "tensorboard==1.14",
         "torch>=1.4.0,!=1.6.0",
