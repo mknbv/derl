@@ -11,7 +11,7 @@ setup(
     packages=["derl"],
     scripts=["derl/scripts/derl"],
     install_requires=[
-        "gym[atari]>=0.11",
+        "gym[atari]>=0.11,<0.15",
         "pybullet",
         "numpy==1.16.4",
         "opencv-python",
