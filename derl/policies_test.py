@@ -23,7 +23,8 @@ class ActorCriticPolicyTest(TorchTestCase):
     policy = ActorCriticPolicy(model)
     act = policy.act(torch.randn(3))
     self.assertEqual(list(act.keys()), ["actions", "log_prob", "values"])
-    self.assertAllClose(act["actions"], np.array([-1.7938228, 1.0464325]))
+    self.assertAllClose(act["actions"], np.array([-1.7938228, 1.0464325]),
+                        rtol=1e-6)
     self.assertAllClose(act["log_prob"], np.array(-3.7467263))
     self.assertAllClose(act["values"], np.array([-0.18482158]), rtol=1e-6)
 

@@ -44,7 +44,7 @@ class PPOPyBulletTest(AlgTestCase):
 
   def test_interactions(self):
     self.assert_interactions("testdata/ppo/pybullet/interactions.npz",
-                             rtol=1e-5, atol=1e-5)
+                             rtol=0, atol=1e-4)
 
   def test_grad(self):
     self.assert_grad("testdata/ppo/pybullet/grads.npz", rtol=1e-5, atol=1e-5)
