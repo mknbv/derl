@@ -13,10 +13,14 @@ on:
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: [3.7.5, 3.6, 3.7, 3.8]
+        include:
+        - os: macos-latest
+          python-version: 3.7.5
+        os: [ubuntu-latest]
+        python-version: [3.6, 3.7, 3.8]
       fail-fast: false
 
     steps:
@@ -34,6 +38,6 @@ jobs:
       run: |
         pylint derl derl/scripts/derl
     - name: Run tests
-      if: ${{ matrix.python-version == '3.7.5' }}
+      if: ${{ matrix.os == 'macos-latest' && matrix.python-version == '3.7.5' }}
       run: |
         python -m unittest discover -s derl -p "*test.py"
