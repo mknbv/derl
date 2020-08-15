@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8]
+        python-version: [3.7.5, 3.6, 3.7, 3.8]
       fail-fast: false
 
     steps:
@@ -34,5 +34,6 @@ jobs:
       run: |
         pylint derl derl/scripts/derl
     - name: Run tests
+      if: ${{ matrix.python-version == '3.7.5' }}
       run: |
         python -m unittest discover -s derl -p "*test.py"
