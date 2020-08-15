@@ -1,5 +1,7 @@
 DERL is a a deep reinforcement learning package with a focus on
-simplicity. It is built on top of PyTorch.
+simplicity. It is built on top of PyTorch. 
+
+![Python package](https://github.com/MichaelKonobeev/derl/workflows/Python%20package/badge.svg)
 
 <p align="middle">
   <img src="./assets/beam-rider.gif" width=175 hspace=10/>
