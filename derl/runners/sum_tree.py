@@ -33,7 +33,7 @@ class SumTree:
     old_value = np.asarray(self.data[index])
     self.data[index] = value
     while index.size:
-      mask = index.astype(np.bool)
+      mask = index.astype(bool)
       index = index[mask] - 1 >> 1
       value, old_value = value[mask], old_value[mask]
       np.add.at(self.data, index, value - old_value)

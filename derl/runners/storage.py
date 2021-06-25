@@ -8,10 +8,10 @@ class InteractionArrays:
   """ Stores arrays of interactions. """
   def __init__(self, size):
     self.size = size
-    self.observations = np.empty(self.size, dtype=np.object)
-    self.actions = np.empty(self.size, dtype=np.object)
+    self.observations = np.empty(self.size, dtype=object)
+    self.actions = np.empty(self.size, dtype=object)
     self.rewards = np.empty(self.size, dtype=np.float32)
-    self.resets = np.empty(self.size, dtype=np.bool)
+    self.resets = np.empty(self.size, dtype=bool)
 
   def get(self, indices, nstep):
     """ Returns `nstep` interactions starting from indices `indices`. """

@@ -10,7 +10,7 @@ class RewardSummarizer:
   def __init__(self, nenvs, prefix, running_mean_size=100):
     self.prefix = prefix
     self.step_count = 0
-    self.had_ended_episodes = np.zeros(nenvs, dtype=np.bool)
+    self.had_ended_episodes = np.zeros(nenvs, dtype=bool)
     self.rewards = np.zeros(nenvs)
     self.episode_lengths = np.zeros(nenvs)
     self.reward_queues = [deque([], maxlen=running_mean_size)
