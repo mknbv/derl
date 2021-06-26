@@ -7,7 +7,7 @@ from torch.distributions import Categorical, Normal, Independent
 
 
 class Policy(ABC):
-  """ RL policy (typically wraps a keras model).  """
+  """ RL policy (typically wraps a torch.nn.Module).  """
   def is_recurrent(self): # pylint: disable=no-self-use
     """ Returns true if policy is recurrent. """
     return False
@@ -36,7 +36,7 @@ def _np(tensor):
 
 
 class ActorCriticPolicy(Policy):
-  """ Actor critic policy with discrete number of actions. """
+  """ Actor-critic policy. """
   def __init__(self, model, distribution=None):
     self.model = model
     self.distribution = distribution
