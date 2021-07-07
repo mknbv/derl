@@ -3,6 +3,7 @@ from collections import namedtuple
 import torch
 
 from derl.alg.common import Loss, r_squared
+from derl.alg.dqn import TargetUpdater
 from derl import summary
 
 
@@ -11,6 +12,19 @@ SACLossTuple = namedtuple(
     "SACLossTuple",
     ["policy_loss", "entropy_scale_loss", "qvalue_losses"])
 # pylint: enable=invalid-name
+
+
+class SmoothTargetUpdater(TargetUpdater):
+  """ Interface for smoothly updating target model. """
+  def __init__(self, model, target, coef=0.005, period=1):
+    super().__init__(model, target, period)
+    self.coef = coef
+
+  def update(self, step_count):
+    for tparam, param in zip(self.target.parameters(),
+                             self.model.parameters()):
+      tparam.data = self.coef * param + (1 - self.coef) * tparam
+    self.last_update_step = step_count
 
 
 class SACLoss(Loss):

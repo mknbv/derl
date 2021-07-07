@@ -3,7 +3,7 @@ from copy import deepcopy
 import torch
 import torch.nn.functional as F
 from derl.alg.common import Loss, Alg, r_squared
-import derl.summary as summary
+from derl import summary
 
 
 class TargetUpdater:
