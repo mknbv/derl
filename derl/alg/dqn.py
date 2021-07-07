@@ -102,9 +102,11 @@ class DQNLoss(Loss):
     loss = huber_loss(qtargets, qvalues, weights=weights)
 
     if summary.should_record():
-      summary.add_scalar("dqn/r_squared", r_squared(qtargets, qvalues),
+      summary.add_scalar(f"{self.name}/r_squared",
+                         r_squared(qtargets, qvalues),
                          global_step=self.call_count)
-      summary.add_scalar("dqn/loss", loss, global_step=self.call_count)
+      summary.add_scalar(f"{self.name}/loss", loss,
+                         global_step=self.call_count)
     self.call_count += 1
     return loss
 

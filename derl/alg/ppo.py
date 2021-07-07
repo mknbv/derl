@@ -58,7 +58,8 @@ class PPOLoss(Loss):
                        policy_loss=policy_loss,
                        entropy=entropy)
       for key, val in summaries.items():
-        summary.add_scalar(f"ppo/{key}", val, global_step=self.call_count)
+        summary.add_scalar(f"{self.name}/{key}", val,
+                           global_step=self.call_count)
 
     return policy_loss - self.entropy_coef * entropy
 
