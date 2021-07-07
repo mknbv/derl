@@ -4,6 +4,8 @@ from abc import ABC, abstractmethod
 import numpy as np
 import torch
 from torch.distributions import Categorical, Normal, Independent
+from torch.distributions.transforms import TanhTransform
+from torch.distributions.transformed_distribution import TransformedDistribution
 
 
 class Policy(ABC):
@@ -35,6 +37,11 @@ def _np(tensor):
   return tensor.cpu().detach().numpy()
 
 
+def multivariate_normal_diag(loc, scale, axis=1):
+  """ Creates multivariate normal distribution with diagonal covariance. """
+  return Independent(Normal(loc, scale), axis)
+
+
 class ActorCriticPolicy(Policy):
   """ Actor-critic policy. """
   def __init__(self, model, distribution=None):
@@ -56,8 +63,7 @@ class ActorCriticPolicy(Policy):
       if len(distribution_inputs) == 1:
         distribution = Categorical(logits=distribution_inputs[0])
       elif len(distribution_inputs) == 2:
-        loc, scale = distribution_inputs
-        distribution = Independent(Normal(loc=loc, scale=scale), 1)
+        distribution = multivariate_normal_diag(*distribution_inputs)
       else:
         raise ValueError(f"model has {len(distribution_inputs)} "
                          "outputs to create a distribution, "
@@ -72,6 +78,45 @@ class ActorCriticPolicy(Policy):
     return {"actions": _np(actions),
             "log_prob": _np(log_prob),
             "values": _np(values)}
+
+
+def tanh_normal_diag(loc, scale, axis=1, cache_size=1):
+  """ Creates distribution arising from applying tanh to normal. """
+  normal = Independent(Normal(loc, scale), axis)
+  transform = TanhTransform(cache_size=cache_size)
+  return TransformedDistribution(normal, transform)
+
+
+class SACPolicy(Policy):
+  """ Soft Actor-Critic Policy. """
+  def __init__(self, model):
+    self.model = model
+
+  def act(self, inputs, state=None, update_state=True, training=False):
+    _ = update_state
+    if state is not None:
+      raise NotImplementedError("SACPolicy does not support state inputs")
+    if not training:
+      with self.model.policy_context():
+        distribution = tanh_normal_diag(*self.model(inputs))
+      return dict(actions=_np(distribution.sample()))
+    observations, taken_actions = inputs["observations"], inputs["actions"]
+    next_observations = inputs.get("next_observations")
+    with self.model.qvalues_context():
+      taken_actions_qvalues = self.model(observations, taken_actions)
+    if next_observations is None:
+      return dict(taken_actions_qvalues=taken_actions_qvalues)
+    with self.model.policy_context():
+      distribution = tanh_normal_diag(*self.model(observations))
+      next_distribution = tanh_normal_diag(*self.model(next_observations))
+    sampled_actions = distribution.rsample()
+    with self.model.qvalues_context():
+      sampled_actions_qvalues = self.model(observations, sampled_actions)
+    return dict(distribution=distribution,
+                taken_actions_qvalues=taken_actions_qvalues,
+                sampled_actions=sampled_actions,
+                sampled_actions_qvalues=sampled_actions_qvalues,
+                next_distribution=next_distribution)
 
 
 class EpsilonGreedyPolicy(Policy):

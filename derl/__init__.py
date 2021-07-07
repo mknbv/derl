@@ -39,6 +39,7 @@ from .models import (
 from .policies import (
     Policy,
     ActorCriticPolicy,
+    SACPolicy,
     EpsilonGreedyPolicy,
 )
 from .scripts import (
