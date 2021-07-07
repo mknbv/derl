@@ -10,7 +10,7 @@ from derl.runners.onpolicy import make_ppo_runner
 
 
 class PPOFactory(Factory):
-  """ Proximal Policy Optimization learner. """
+  """ Proximal Policy Optimization factory. """
   def __init__(self, *, ignore_unused=("nenvs",), **kwargs):
     super().__init__(ignore_unused=ignore_unused, **kwargs)
 
