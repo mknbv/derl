@@ -41,6 +41,7 @@ jobs:
       if: ${{ matrix.os == 'macos-latest' && matrix.python-version == '3.7.5' }}
       run: |
         wget http://www.atarimania.com/roms/Roms.rar
-        unrar Roms.rar
+        brew install unar
+        unar Roms.rar
         python -m atari_py.import_roms Roms
         python -m unittest discover -s derl -p "*test.py"
