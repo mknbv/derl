@@ -1,8 +1,9 @@
 """ Implements Soft Actor-Critic algorithm. """
 from collections import namedtuple
+from copy import deepcopy
 import torch
 
-from derl.alg.common import Loss, r_squared
+from derl.alg.common import Alg, Loss, r_squared
 from derl.alg.dqn import TargetUpdater
 from derl import summary
 
@@ -152,3 +153,38 @@ class SACLoss(Loss):
     qvalue_losses = self.qvalue_losses(data, act)
     self.call_count += 1
     return SACLossTuple(policy_loss, entropy_scale_loss, qvalue_losses)
+
+
+class SAC(Alg):
+  """ Soft Actor-Critic algorithm.
+
+  See [Haarnoja et al.](https://arxiv.org/abs/1812.05905)
+  """
+  def __init__(self, runner, trainer,
+               target_policy=None, target_updater=None,
+               name=None, **loss_kwargs):
+    if target_policy is None:
+      target_policy = deepcopy(runner.policy)
+    loss_fn = SACLoss(runner.policy, target_policy, name=name, **loss_kwargs)
+    super().__init__(runner, trainer, loss_fn, name=name)
+    self.target_updater = target_updater
+    self.step_count = 0
+
+  @classmethod
+  def make(cls, runner, trainer, target_policy=None,
+           target_update_coef=0.005, target_update_period=1,
+           **kwargs):
+    """ Creates SAC algorithm with target updater from arguments. """
+    model = runner.policy.model
+    if target_policy is None:
+      target_policy = deepcopy(runner.policy)
+    target_updater = SmoothTargetUpdater(
+        model, target_policy.model, target_update_coef, target_update_period)
+    return cls(runner, trainer, target_policy, target_updater, **kwargs)
+
+  def step(self, data):
+    if self.target_updater.should_update(self.step_count):
+      self.target_updater.update(self.step_count)
+    loss = super().step(data)
+    self.step_count += 1
+    return loss
