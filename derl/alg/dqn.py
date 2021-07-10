@@ -133,5 +133,6 @@ class DQN(Alg):
   def step(self, data):
     if self.target_updater.should_update(self.step_count):
       self.target_updater.update(self.step_count)
-    super().step(data)
+    loss = super().step(data)
     self.step_count += 1
+    return loss
