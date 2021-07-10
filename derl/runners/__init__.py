@@ -10,6 +10,7 @@ from derl.runners.experience_replay import (
     ExperienceReplay,
     dqn_runner_wrap,
     make_dqn_runner,
+    make_sac_runner,
 )
 from derl.runners.storage import (
     InteractionStorage,

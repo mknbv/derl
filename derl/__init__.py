@@ -17,6 +17,7 @@ from .runners import (
     ExperienceReplay,
     dqn_runner_wrap,
     make_dqn_runner,
+    make_sac_runner,
     InteractionStorage,
     PrioritizedStorage,
     PeriodicSummaries,

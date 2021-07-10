@@ -6,7 +6,7 @@ from derl.runners.env_runner import EnvRunner, RunnerWrapper
 from derl.runners.onpolicy import TransformInteractions
 from derl.runners.storage import InteractionStorage, PrioritizedStorage
 from derl.runners.summary import PeriodicSummaries
-import derl.summary as summary
+from derl import summary
 
 
 class ExperienceReplay(RunnerWrapper):
@@ -128,9 +128,43 @@ def dqn_runner_wrap(runner, prioritized=True,
 
 def make_dqn_runner(env, policy, num_train_steps, steps_per_sample=4,
                     nlogs=1e5, **wrap_kwargs):
-  """ Creates experience replay runner as used typically used with DQN alg. """
+  """ Creates experience replay runner as typically used with DQN alg. """
   runner = EnvRunner(env, policy, horizon=steps_per_sample,
                      nsteps=num_train_steps)
   runner = PeriodicSummaries.make_with_nlogs(runner, nlogs)
   runner = TransformInteractions(runner)
   return dqn_runner_wrap(runner, **wrap_kwargs)
+
+
+class ResampleStorage(RunnerWrapper):
+  """ Resamples from specified number of times. """
+  def __init__(self, runner, num_samples, batch_size=None):
+    if not hasattr(runner, "storage"):
+      raise TypeError("runner must have 'storage' attribute, got runner "
+                      f"{runner}")
+    if batch_size is None:
+      if not hasattr(runner, "batch_size"):
+        raise TypeError("when batch_size is None runner must have 'batch_size' "
+                        f"attribute, got runner {runner}")
+      batch_size = runner.batch_size
+    super().__init__(runner)
+    self.num_samples = num_samples
+    self.batch_size = batch_size
+
+  def run(self, obs=None):
+    for interactions in self.runner.run(obs=obs):
+      yield interactions
+      for _ in range(self.num_samples):
+        yield self.runner.storage.sample(self.batch_size)
+
+
+def make_sac_runner(env, policy, num_train_steps,
+                    batch_size=256,
+                    steps_per_sample=1000,
+                    num_storage_samples=1000, **kwargs):
+  """ Creates env runner as typically done with SAC. """
+  runner = make_dqn_runner(env, policy, num_train_steps,
+                           batch_size=batch_size,
+                           steps_per_sample=steps_per_sample,
+                           prioritized=False, **kwargs)
+  return ResampleStorage(runner, num_storage_samples - 1)
