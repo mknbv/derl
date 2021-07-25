@@ -72,17 +72,20 @@ def collocate_inputs(device=True, dtype=True):
   """ Collocates inputs with model. """
   def decorator(forward):
     @wraps(forward)
-    def wrapped(self, inputs):
-      if isinstance(inputs, np.ndarray):
-        inputs = torch.from_numpy(inputs)
-      model_device = next(self.parameters()).device
-      model_dtype = next(self.parameters()).dtype
-      if ((device and inputs.device != model_device)
-          or (dtype and inputs.dtype != model_dtype)):
-        target_device = model_device if device else None
-        target_dtype = model_dtype if dtype else None
-        inputs = inputs.to(device=target_device, dtype=target_dtype)
-      return forward(self, inputs)
+    def wrapped(self, *inputs):
+      collocated = []
+      for inpt in inputs:
+        if isinstance(inpt, np.ndarray):
+          inpt = torch.from_numpy(inpt)
+        model_device = next(self.parameters()).device
+        model_dtype = next(self.parameters()).dtype
+        if ((device and inpt.device != model_device)
+            or (dtype and inpt.dtype != model_dtype)):
+          target_device = model_device if device else None
+          target_dtype = model_dtype if dtype else None
+          inpt = inpt.to(device=target_device, dtype=target_dtype)
+        collocated.append(inpt)
+      return forward(self, *collocated)
     return wrapped
   return decorator
 
@@ -139,10 +142,17 @@ def broadcast_inputs(ndims):
   """ Broadcast inputs to specified number of dims and then back. """
   def decorator(forward):
     @wraps(forward)
-    def wrapped(self, inputs):
-      expand_dims = ndims - len(inputs.shape)
-      inputs = inputs[(None,) * expand_dims]
-      outputs = forward(self, inputs)
+    def wrapped(self, *inputs):
+      input_ndim = inputs[0].ndim
+      for i, inpt in enumerate(inputs):
+        if inpt.ndim != input_ndim:
+          raise ValueError("for broadcasting all inputs must have the same "
+                           "number of dimensions, got "
+                           f"inputs[0].shape={inputs[0].shape}, "
+                           f"inputs[{i}].shape={inputs[i].shape}")
+      expand_dims = ndims - input_ndim
+      inputs = tuple(inpt[(None,) * expand_dims] for inpt in inputs)
+      outputs = forward(self, *inputs)
       if expand_dims:
         if isinstance(outputs, (tuple, list)):
           return type(outputs)(
@@ -187,8 +197,9 @@ class NatureCNNModel(nn.Module):
     self.to("cuda" if torch.cuda.is_available() else "cpu")
 
   @broadcast_inputs(ndims=4)
-  def forward(self, inputs):  # pylint: disable=arguments-differ
-    base_outputs = self.base(inputs)
+  def forward(self, *inputs):
+    observations, = inputs
+    base_outputs = self.base(observations)
     outputs = [layer(base_outputs) for layer in self.output_layers]
     if self.nbins is not None:
       nactions = self.output_units[0] // self.nbins
@@ -246,10 +257,11 @@ class MuJoCoModel(nn.Module):
 
   @broadcast_inputs(ndims=2)
   @collocate_inputs()
-  def forward(self, inputs):  # pylint: disable=arguments-differ
-    inputs = inputs.reshape((inputs.shape[0], -1))
-    logits, *outputs = (module(inputs) for module in self.module_list)
-    batch_size = inputs.shape[0]
+  def forward(self, *inputs):
+    observations, = inputs
+    observations = observations.reshape((observations.shape[0], -1))
+    logits, *outputs = (module(observations) for module in self.module_list)
+    batch_size = observations.shape[0]
     std = torch.repeat_interleave(torch.exp(self.logstd)[None], batch_size, 0)
     return (logits, std, *outputs)
 
