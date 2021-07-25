@@ -13,6 +13,11 @@ class AlgTestCase(TorchTestCase):
     summary.stop_recording()
     summary.should_record = lambda *args, **kwargs: False
 
+  def save_interactions(self, fname):
+    """ Saves interactions to a file. """
+    interactions = next(self.alg.runner.run())
+    np.savez(fname, **interactions)
+
   def assert_interactions(self, fname, ignore_keys=("state", "infos"),
                           rtol=1e-7, atol=0.):
     """ Checks that interactions have values from the file. """
@@ -26,16 +31,33 @@ class AlgTestCase(TorchTestCase):
           self.assertAllClose(interactions[key], expected[key],
                               rtol=rtol, atol=atol)
 
+  def save_grad(self, fname):
+    """ Saves gradient to the file. """
+    interactions = next(self.alg.runner.run())
+    loss = self.alg.loss(interactions)
+    loss.backward()
+    grads = {f"grad_{i}": param.grad.numpy() for i, param in
+             enumerate(self.alg.model.parameters())}
+    np.savez(fname, **grads)
+
   def assert_grad(self, fname, rtol=1e-7, atol=0.):
     """ Checks that the gradients are close to the values from the file. """
     interactions = next(self.alg.runner.run())
     loss = self.alg.loss(interactions)
     loss.backward()
-    expected = np.load(fname)
-    for i, param in enumerate(self.alg.model.parameters()):
-      with self.subTest(grad_i=i):
-        self.assertAllClose(param.grad, expected[f"grad_{i}"],
-                            rtol=rtol, atol=atol)
+    with np.load(fname) as expected:
+      for i, param in enumerate(self.alg.model.parameters()):
+        with self.subTest(grad_i=i):
+          self.assertAllClose(param.grad, expected[f"grad_{i}"],
+                              rtol=rtol, atol=atol)
+
+  def save_losses(self, filename, num_losses):
+    """ Saves losses to the file. """
+    data_iter = self.alg.runner.run()
+    losses = []
+    for _ in range(num_losses):
+      losses.append(self.alg.step(next(data_iter)).detach().item())
+    np.save(filename, np.asarray(losses))
 
   def assert_losses(self, filename, rtol=1e-6, atol=0.):
     """ Checks that loss values are close to those from the file. """
