@@ -1,4 +1,5 @@
 """ PyTorch models for RL. """
+from functools import wraps
 from itertools import chain, tee
 from math import floor
 import gym
@@ -67,6 +68,25 @@ def conv2d_output_shape(height, width, conv2d):
   return out_height, out_width
 
 
+def collocate_inputs(device=True, dtype=True):
+  """ Collocates inputs with model. """
+  def decorator(forward):
+    @wraps(forward)
+    def wrapped(self, inputs):
+      if isinstance(inputs, np.ndarray):
+        inputs = torch.from_numpy(inputs)
+      model_device = next(self.parameters()).device
+      model_dtype = next(self.parameters()).dtype
+      if ((device and inputs.device != model_device)
+          or (dtype and inputs.dtype != model_dtype)):
+        target_device = model_device if device else None
+        target_dtype = model_dtype if dtype else None
+        inputs = inputs.to(device=target_device, dtype=target_dtype)
+      return forward(self, inputs)
+    return wrapped
+  return decorator
+
+
 class NatureCNNBase(nn.Sequential):
   """ Hidden layers of the Nature DQN model. """
   def __init__(self, input_shape=(84, 84, 4), permute=True, noisy=False):
@@ -90,12 +110,8 @@ class NatureCNNBase(nn.Sequential):
     linear_class = NoisyLinear if noisy else nn.Linear
     self.add_module("linear", linear_class(in_features, 512))
 
+  @collocate_inputs(dtype=False)
   def forward(self, inputs):  # pylint: disable=arguments-differ
-    if isinstance(inputs, np.ndarray):
-      inputs = torch.from_numpy(inputs)
-    device = next(self.parameters()).device
-    if inputs.device != device:
-      inputs = inputs.to(device)
     if self.permute:
       inputs = inputs.permute(0, 3, 1, 2)
     if inputs.dtype == torch.uint8:
@@ -122,6 +138,7 @@ def orthogonal_init(layer):
 def broadcast_inputs(ndims):
   """ Broadcast inputs to specified number of dims and then back. """
   def decorator(forward):
+    @wraps(forward)
     def wrapped(self, inputs):
       expand_dims = ndims - len(inputs.shape)
       inputs = inputs[(None,) * expand_dims]
@@ -228,15 +245,9 @@ class MuJoCoModel(nn.Module):
     self.to("cuda" if torch.cuda.is_available() else "cpu")
 
   @broadcast_inputs(ndims=2)
+  @collocate_inputs()
   def forward(self, inputs):  # pylint: disable=arguments-differ
-    if isinstance(inputs, np.ndarray):
-      inputs = torch.from_numpy(inputs)
-    device = next(self.parameters()).device
-    dtype = next(self.parameters()).dtype
-    if inputs.device != device or inputs.dtype != dtype:
-      inputs = inputs.to(device, dtype)
     inputs = inputs.reshape((inputs.shape[0], -1))
-
     logits, *outputs = (module(inputs) for module in self.module_list)
     batch_size = inputs.shape[0]
     std = torch.repeat_interleave(torch.exp(self.logstd)[None], batch_size, 0)
