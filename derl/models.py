@@ -238,7 +238,7 @@ class MLP(nn.Sequential):
 
 class MuJoCoModel(nn.Module):
   """ MuJoCo model. """
-  def __init__(self, input_shape,
+  def __init__(self, observation_dim,
                output_units,
                mlp=MLP,
                init_fn=orthogonal_init):
@@ -247,7 +247,7 @@ class MuJoCoModel(nn.Module):
       output_units = [output_units]
     self.module_list = nn.ModuleList()
     for nunits in output_units:
-      self.module_list.append(mlp(np.prod(input_shape), nunits))
+      self.module_list.append(mlp(observation_dim, nunits))
     if init_fn is not None:
       self.apply(init_fn)
     self.logstd = nn.Parameter(torch.zeros(output_units[0]))
@@ -264,6 +264,13 @@ class MuJoCoModel(nn.Module):
     return (logits, std, *outputs)
 
 
+def vector_size(shape):
+  """ Checks whether the given shape is 1-dim and returns its size. """
+  if len(shape) != 1:
+    raise ValueError(f"expected vector shape, got shape={shape}")
+  return shape[0]
+
+
 def make_model(observation_space, action_space, other_outputs=None, **kwargs):
   """ Creates default model for given observation and action spaces. """
   if isinstance(other_outputs, int) or other_outputs is None:
@@ -276,12 +283,10 @@ def make_model(observation_space, action_space, other_outputs=None, **kwargs):
     return NatureCNNModel(input_shape=observation_space.shape,
                           output_units=output_units, **kwargs)
   if isinstance(action_space, gym.spaces.Box):
-    if len(action_space.shape) != 1:
-      raise ValueError("when action space is an instance of gym.spaces.Box "
-                       "it should have a single dimension, got "
-                       f"len(action_space.shape) = {len(action_space.shape)}")
-    output_units = [action_space.shape[0], *other_outputs]
-    return MuJoCoModel(input_shape=observation_space.shape,
+    observation_dim = vector_size(observation_space.shape)
+    action_dim = vector_size(action_space.shape)
+    output_units = [action_dim, *other_outputs]
+    return MuJoCoModel(observation_dim=observation_dim,
                        output_units=output_units, **kwargs)
   raise ValueError(f"unsupported action space {action_space}")
 
