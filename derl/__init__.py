@@ -33,6 +33,7 @@ from .models import (
     MuJoCoModel,
     make_model,
     SACMLP,
+    ContinuousQValueModel,
 )
 from .policies import (
     Policy,

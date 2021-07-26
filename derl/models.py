@@ -1,5 +1,5 @@
 """ PyTorch models for RL. """
-from functools import wraps
+from functools import partial, wraps
 from itertools import chain, tee
 from math import floor
 import gym
@@ -307,3 +307,23 @@ class SACMLP(nn.Module):
     hidden = self.activation(self.hidden.forward(*inputs))
     return [head(hidden) for head in self.heads][
         slice(None) if self.nheads is not None else 0]
+
+
+class ContinuousQValueModel(nn.Module):
+  """ Continuous Q-value model. """
+  def __init__(self, observation_dim, action_dim,
+               mlp=partial(SACMLP, nheads=None), init_fn=orthogonal_init):
+    super().__init__()
+    self.observation_dim = observation_dim
+    self.action_dim = action_dim
+    self.mlp = mlp(observation_dim + action_dim, 1)
+    if init_fn is not None:
+      self.apply(init_fn)
+    self.to("cuda" if torch.cuda.is_available() else "cpu")
+
+  @broadcast_inputs(ndims=2)
+  @collocate_inputs()
+  def forward(self, *inputs):
+    observations, actions = inputs
+    cat = torch.cat([observations, actions], -1)
+    return self.mlp(cat)
