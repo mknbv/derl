@@ -153,14 +153,12 @@ def broadcast_inputs(ndims):
       expand_dims = ndims - input_ndim
       inputs = tuple(inpt[(None,) * expand_dims] for inpt in inputs)
       outputs = forward(self, *inputs)
-      if expand_dims:
-        if isinstance(outputs, (tuple, list)):
-          return type(outputs)(
-              map(lambda t: torch.reshape(t, t.shape[expand_dims:]),
-                  outputs)
-          )
-        return torch.reshape(outputs, outputs.shape[expand_dims:])
-      return outputs
+
+      def unbroadcast(output):
+        if isinstance(output, (tuple, list)):
+          return type(output)(unbroadcast(out) for out in output)
+        return torch.reshape(output, output.shape[expand_dims:])
+      return unbroadcast(outputs)
     return wrapped
   return decorator
 
