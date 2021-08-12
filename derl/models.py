@@ -1,5 +1,6 @@
 """ PyTorch models for RL. """
 from functools import partial, wraps
+from contextlib import contextmanager
 from itertools import chain, tee
 from math import floor
 import gym
@@ -238,10 +239,8 @@ class MLP(nn.Sequential):
 
 class MuJoCoModel(nn.Module):
   """ MuJoCo model. """
-  def __init__(self, observation_dim,
-               output_units,
-               mlp=MLP,
-               init_fn=orthogonal_init):
+  def __init__(self, observation_dim, output_units, mlp=MLP,
+               logstd_from_mlp=None, init_fn=orthogonal_init):
     super().__init__()
     if not isinstance(output_units, (tuple, list)):
       output_units = [output_units]
@@ -250,18 +249,25 @@ class MuJoCoModel(nn.Module):
       self.module_list.append(mlp(observation_dim, nunits))
     if init_fn is not None:
       self.apply(init_fn)
-    self.logstd = nn.Parameter(torch.zeros(output_units[0]))
+    if logstd_from_mlp is None:
+      outputs = self.module_list[0](torch.empty(observation_dim))
+      logstd_from_mlp = (isinstance(outputs, (list, tuple))
+                         and len(outputs) == 2)
+    self.logstd = (nn.Parameter(torch.zeros(output_units[0]))
+                   if not logstd_from_mlp else None)
     self.to("cuda" if torch.cuda.is_available() else "cpu")
 
   @broadcast_inputs(ndims=2)
   @collocate_inputs()
   def forward(self, *inputs):
     observations, = inputs
-    observations = observations.reshape((observations.shape[0], -1))
-    logits, *outputs = (module(observations) for module in self.module_list)
+    first, *other = (module(observations) for module in self.module_list)
+    if self.logstd is None:
+      logits, logstd = first
+      return (logits, torch.exp(logstd), *other)
     batch_size = observations.shape[0]
     std = torch.repeat_interleave(torch.exp(self.logstd)[None], batch_size, 0)
-    return (logits, std, *outputs)
+    return (first, std, *other)
 
 
 def vector_size(shape):
@@ -332,3 +338,67 @@ class ContinuousQValueModel(nn.Module):
     observations, actions = inputs
     cat = torch.cat([observations, actions], -1)
     return self.mlp(cat)
+
+
+class SACModel(nn.Module):
+  """ Combines policy and Q-values modules as used by SAC algorithm. """
+  def __init__(self, policy, qvalues):
+    super().__init__()
+    self.policy = policy
+    if isinstance(qvalues, (list, tuple, np.ndarray)):
+      qvalues = nn.ModuleList(qvalues)
+    self.qvalues = qvalues
+    self.active_module = self.policy
+
+  @classmethod
+  def make(cls, observation_space, action_space, num_qvalue_functions=2,
+           policy_mlp=SACMLP, qvalues_mlp=partial(SACMLP, nheads=None),
+           init_fn=orthogonal_init):
+    """ Creates SACModel. """
+    observation_dim = vector_size(observation_space.shape)
+    action_dim = vector_size(action_space.shape)
+    policy = MuJoCoModel(observation_dim, action_dim,
+                         mlp=policy_mlp, init_fn=init_fn)
+    qvalues = [
+        ContinuousQValueModel(observation_dim, action_dim, mlp=qvalues_mlp,
+                              init_fn=orthogonal_init)
+        for _ in range(num_qvalue_functions)
+    ]
+    return cls(policy, qvalues)
+
+  def qvalues_parameters(self):
+    """ Iterator over parameters of the q-values module list. """
+    yield from chain.from_iterable(map(nn.Module.parameters, self.qvalues))
+
+  def policy_mode(self):
+    """ Activates policy module of the model. """
+    self.active_module = self.policy
+
+  @contextmanager
+  def policy_context(self):
+    """ Policy mode context manager. """
+    module = self.active_module
+    self.policy_mode()
+    try:
+      yield
+    finally:
+      self.active_module = module
+
+  def qvalues_mode(self):
+    """ Activates qvalues module of the model. """
+    self.active_module = self.qvalues
+
+  @contextmanager
+  def qvalues_context(self):
+    """ Q-values mode context manager. """
+    module = self.active_module
+    self.qvalues_mode()
+    try:
+      yield
+    finally:
+      self.active_module = module
+
+  def forward(self, *inputs):
+    return ([module(*inputs) for module in self.active_module]
+            if isinstance(self.active_module, nn.ModuleList)
+            else self.active_module(*inputs))

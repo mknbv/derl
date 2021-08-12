@@ -34,6 +34,7 @@ from .models import (
     make_model,
     SACMLP,
     ContinuousQValueModel,
+    SACModel
 )
 from .policies import (
     Policy,
