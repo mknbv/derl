@@ -32,6 +32,7 @@ from .models import (
     MLP,
     MuJoCoModel,
     make_model,
+    SACMLP,
 )
 from .policies import (
     Policy,

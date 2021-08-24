@@ -284,3 +284,26 @@ def make_model(observation_space, action_space, other_outputs=None, **kwargs):
     return MuJoCoModel(input_shape=observation_space.shape,
                        output_units=output_units, **kwargs)
   raise ValueError(f"unsupported action space {action_space}")
+
+
+class SACMLP(nn.Module):
+  """ MLP for use with SAC model. """
+  def __init__(self, in_features, out_features, nheads=2,
+               hidden_features=(256, 256), activation=nn.ReLU):
+    super().__init__()
+    self.hidden = MLP(in_features=in_features,
+                      out_features=hidden_features[-1],
+                      hidden_features=hidden_features[:-1],
+                      activation=activation)
+    if nheads is not None and nheads < 1:
+      raise ValueError("nheads must be either None or at least 1, "
+                       f"got nheads={nheads}")
+    self.nheads = nheads
+    self.activation = activation()
+    self.heads = nn.ModuleList(nn.Linear(hidden_features[-1], out_features)
+                               for _ in range(nheads or 1))
+
+  def forward(self, *inputs):
+    hidden = self.activation(self.hidden.forward(*inputs))
+    return [head(hidden) for head in self.heads][
+        slice(None) if self.nheads is not None else 0]
