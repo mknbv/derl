@@ -70,6 +70,12 @@ class Factory(ABC):
   def get_parser_defaults(args_type="atari"):
     """ Returns default argument dictionary for argument parsing. """
 
+  @staticmethod
+  def make_env_kwargs(env_id):
+    """ Returns keyword arguments for derl.env.make function. """
+    _ = env_id
+    return {}
+
   @classmethod
   def get_kwargs(cls, args_type="atari"):
     """ Returns dictionary of keyword arguments. """

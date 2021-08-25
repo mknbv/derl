@@ -31,6 +31,11 @@ class SACFactory(Factory):
         }
     }.get(args_type)
 
+  @staticmethod
+  def make_env_kwargs(env_id):
+    _ = env_id
+    return dict(normalize_obs=False, normalize_ret=False)
+
   def make_runner(self, env, nlogs=1e5, **kwargs):
     with self.override_context(**kwargs):
       model = (self.get_arg("model") if self.has_arg("model")
