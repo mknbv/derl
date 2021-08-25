@@ -1,9 +1,10 @@
 """ Implements Soft Actor-Critic algorithm. """
 from collections import namedtuple
 from copy import deepcopy
+from itertools import chain
 import torch
 
-from derl.alg.common import Alg, Loss, r_squared
+from derl.alg.common import Trainer, Alg, Loss, r_squared
 from derl.alg.dqn import TargetUpdater
 from derl import summary
 
@@ -186,5 +187,50 @@ class SAC(Alg):
     if self.target_updater.should_update(self.step_count):
       self.target_updater.update(self.step_count)
     loss = super().step(data)
+    self.step_count += 1
+    return loss
+
+
+class SACTrainer(Trainer):
+  """ SAC trainer. """
+  def __init__(self, policy_opt, entropy_scale_opt, qvalue_opts,
+               max_grad_norm=None):
+    super().__init__(optimizer=None, max_grad_norm=max_grad_norm)
+    self.policy_opt = policy_opt
+    self.entropy_scale_opt = entropy_scale_opt
+    self.qvalue_opts = qvalue_opts
+
+  def optimizer_step(self, optimizer, loss, tag):
+    """ Performs single step of the optimizer. """
+    optimizer.zero_grad()
+    loss.backward()
+    self.preprocess_gradients(chain.from_iterable(
+        group["params"] for group in optimizer.param_groups), tag)
+    optimizer.step()
+
+  def step_policy(self, alg, *, policy_loss):
+    """ Performs policy update. """
+    self.optimizer_step(self.policy_opt, policy_loss,
+                        f"{alg.name}/policy_grad_norm")
+
+  def step_entropy_scale(self, alg, *, entropy_scale_loss):
+    """ Performs entropy scale update. """
+    self.optimizer_step(self.entropy_scale_opt, entropy_scale_loss,
+                        f"{alg.name}/entropy_scale_grad_norm")
+
+  def step_qvalues(self, alg, *, qvalue_losses):
+    """ Performs qvalue updates. """
+    if len(self.qvalue_opts) != len(qvalue_losses):
+      raise ValueError("number of qvalue optimizers "
+                       f"({len(self.qvalue_opts)}) does not match the "
+                       f"number of losses ({len(qvalue_losses)})")
+    for i, (opt, loss) in enumerate(zip(self.qvalue_opts, qvalue_losses)):
+      self.optimizer_step(opt, loss, f"{alg.name}/qvalues_{i}_grad_norm")
+
+  def step(self, alg, data):
+    loss = alg.loss(data)
+    self.step_policy(alg, policy_loss=loss.policy_loss)
+    self.step_entropy_scale(alg, entropy_scale_loss=loss.entropy_scale_loss)
+    self.step_qvalues(alg, qvalue_losses=loss.qvalue_losses)
     self.step_count += 1
     return loss
