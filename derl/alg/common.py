@@ -1,6 +1,5 @@
 """ Defines algorithm base class and various utils. """
 from abc import ABC, abstractmethod
-from functools import partial
 
 import torch
 from tqdm import tqdm
@@ -54,7 +53,7 @@ class Trainer:
     self.max_grad_norm = max_grad_norm
     self.step_count = 0
 
-  def preprocess_gradients(self, parameters, name):
+  def preprocess_gradients(self, parameters, tag):
     """ Applies gradient preprocessing. """
     grad_norm = None
     if self.max_grad_norm is not None:
@@ -62,20 +61,21 @@ class Trainer:
     if summary.should_record():
       if grad_norm is None:
         grad_norm = total_norm(p.grad for p in parameters if p.grad is not None)
-      summary.add_scalar(f"{name}/grad_norm", grad_norm,
-                         global_step=self.step_count)
+      summary.add_scalar(tag, grad_norm, global_step=self.step_count)
 
-  def step(self, alg):
+  def step(self, alg, data):
     """ Performs single training step of a given algorithm. """
-    alg.accumulate_gradients()
-    self.preprocess_gradients(alg.model.parameters(), alg.name)
+    loss = alg.loss(data)
+    self.optimizer.zero_grad()
+    loss.backward()
+    self.preprocess_gradients(alg.model.parameters(), f"{alg.name}/grad_norm")
     for anneal in self.anneals:
       if summary.should_record():
         anneal.summarize(alg.runner.step_count)
       anneal.step_to(alg.runner.step_count)
     self.optimizer.step()
-    self.optimizer.zero_grad()
     self.step_count += 1
+    return loss
 
 
 class Alg:
@@ -93,17 +93,9 @@ class Alg:
     """ Computes and returns the loss function on data. """
     return self.loss_fn(data)
 
-  def accumulate_gradients(self, loss):
-    """ Accumulates gradients in models parameters. """
-    # pylint: disable=no-self-use
-    loss.backward()
-
   def step(self, data):
     """ Performs learning step of the algorithm. """
-    loss = self.loss(data)
-    self.accumulate_gradients = partial(self.accumulate_gradients, loss)
-    self.trainer.step(self)
-    self.accumulate_gradients = self.accumulate_gradients.func
+    loss = self.trainer.step(self, data)
     return loss
 
   def learn(self):
