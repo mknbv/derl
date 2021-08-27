@@ -15,9 +15,10 @@ from .atari_wrappers import (
     SkipFrames,
     ClipReward,
 )
-from .normalize import (
+from .mujoco_wrappers import (
     RunningMeanVar,
     Normalize,
+    TanhRangeActions,
 )
 from .make_env import (
     list_envs,

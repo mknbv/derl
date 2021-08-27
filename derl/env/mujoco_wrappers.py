@@ -1,5 +1,6 @@
 """ MuJoCo env wrappers. """
-# Adapted from https://github.com/openai/baselines
+# Normalize wrapper is adapted from https://github.com/openai/baselines
+from copy import deepcopy
 import gym
 import numpy as np
 
@@ -121,3 +122,24 @@ class Normalize(gym.Wrapper):
     self.ret = np.zeros(getattr(self.env.unwrapped, "nenvs", 1))
     obs = self.env.reset(**kwargs)
     return self.observation(obs)
+
+
+class TanhRangeActions(gym.ActionWrapper):
+  """ Changes the domain of actions to [-1, 1]. """
+  def __init__(self, env):
+    super().__init__(env)
+    self.action_space = deepcopy(self.env.action_space)
+    self.action_space.low.fill(-1.)
+    self.action_space.high.fill(1.)
+
+  def action(self, action):
+    # low = -k + b
+    # high = k + b
+    # b = (high + low) / 2, k = high - b = (high - low) / 2
+    # unwrapped_action = (high - low) / 2 * action + (high + low) / 2
+    low, high = self.env.action_space.low, self.env.action_space.high
+    return (high - low) / 2 * action + (high + low) / 2
+
+  def reverse_action(self, action):
+    low, high = self.env.action_space.low, self.env.action_space.high
+    return (2 * action - (high + low)) / (high - low)

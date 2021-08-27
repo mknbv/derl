@@ -17,7 +17,7 @@ from .atari_wrappers import (
     ClipReward,
 )
 from .env_batch import ParallelEnvBatch
-from .normalize import Normalize
+from .mujoco_wrappers import Normalize, TanhRangeActions
 from .summarize import Summarize
 
 
@@ -137,30 +137,37 @@ def nature_dqn_wrap(env, summarize=True, episodic_life=True, clip_reward=True):
 
 
 def mujoco_env(env_id, nenvs=None, seed=None, summarize=True,
-               normalize_obs=True, normalize_ret=True):
+               normalize_obs=True, normalize_ret=True,
+               tanh_range_actions=False):
   """ Creates and wraps MuJoCo env. """
   assert is_mujoco_id(env_id)
   seed = get_seed(nenvs, seed)
   if nenvs is not None:
     env = ParallelEnvBatch([
         lambda s=s: mujoco_env(env_id, seed=s, summarize=False,
-                               normalize_obs=False, normalize_ret=False)
+                               normalize_obs=False, normalize_ret=False,
+                               tanh_range_actions=False)
         for s in seed])
     return mujoco_wrap(env, summarize=summarize, normalize_obs=normalize_obs,
                        normalize_ret=normalize_ret)
 
   env = gym.make(env_id)
   set_seed(env, seed)
-  return mujoco_wrap(env, summarize=summarize, normalize_obs=normalize_obs,
-                     normalize_ret=normalize_ret)
+  return mujoco_wrap(env, summarize=summarize,
+                     normalize_obs=normalize_obs,
+                     normalize_ret=normalize_ret,
+                     tanh_range_actions=tanh_range_actions)
 
 
-def mujoco_wrap(env, summarize=True, normalize_obs=True, normalize_ret=True):
+def mujoco_wrap(env, summarize=True, normalize_obs=True, normalize_ret=True,
+                tanh_range_actions=False):
   """ Wraps given env as a mujoco env. """
   if summarize:
     env = Summarize.reward_summarizer(env)
   if normalize_obs or normalize_ret:
     env = Normalize(env, obs=normalize_obs, ret=normalize_ret)
+  if tanh_range_actions:
+    env = TanhRangeActions(env)
   return env
 
 

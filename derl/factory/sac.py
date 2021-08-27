@@ -34,7 +34,8 @@ class SACFactory(Factory):
   @staticmethod
   def make_env_kwargs(env_id):
     _ = env_id
-    return dict(normalize_obs=False, normalize_ret=False)
+    return dict(normalize_obs=False, normalize_ret=False,
+                tanh_range_actions=True)
 
   def make_runner(self, env, nlogs=1e5, **kwargs):
     with self.override_context(**kwargs):
