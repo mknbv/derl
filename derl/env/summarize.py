@@ -44,11 +44,11 @@ class RewardSummarizer:
       self.rewards[i] = 0
       self.had_ended_episodes[i] = True
 
+    self.step_count += self.rewards.shape[0]
     if self.should_add_summaries():
       self.add_summaries()
       self.episode_lengths.fill(0)
       self.had_ended_episodes.fill(False)
-    self.step_count += self.rewards.shape[0]
 
 
 class Summarize(Wrapper):
