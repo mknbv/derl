@@ -166,5 +166,5 @@ def make_sac_runner(env, policy, num_train_steps,
   runner = make_dqn_runner(env, policy, num_train_steps,
                            batch_size=batch_size,
                            steps_per_sample=steps_per_sample,
-                           prioritized=False, **kwargs)
+                           prioritized=False, nstep=1, **kwargs)
   return ResampleStorage(runner, num_storage_samples - 1)
