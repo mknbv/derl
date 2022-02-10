@@ -71,7 +71,7 @@ class InteractionStorage:
         or batch_size != resets.shape[0]):
       raise ValueError(
           "observations, actions, rewards, and resets all must have the same "
-          "first dimension, got first dim sizes: "
+          f"first dimension, got first dim sizes: {observations.shape[0]}, "
           f"{actions.shape[0]}, {rewards.shape[0]}, {resets.shape[0]}")
 
     indices = (self.index + np.arange(batch_size)) % self.capacity
@@ -87,9 +87,19 @@ class InteractionStorage:
     # taken correctly.
     indices = np.random.randint(self.index - self.nstep if not self.is_full
                                 else self.capacity - self.nstep, size=size)
+    # Indices at most nstep before self.index should not be sampled.
     nosample_index = (self.index + self.capacity - self.nstep) % self.capacity
-    inc_mask = indices >= nosample_index
-    indices[inc_mask] = (indices[inc_mask] + self.nstep) % self.capacity
+    # If no cycle move occured, then increment all sampled indices
+    # above nosample_index by nstep. Note that when sampling
+    # indices the capacity excludes nstep last steps so there is no
+    # overflow.
+    if nosample_index < self.index:
+      inc_mask = nosample_index <= indices
+      indices[inc_mask] = indices[inc_mask] + self.nstep
+    elif self.index:
+      # Otherwise, a cycle move occured and we need to increment
+      # all indices by self.index
+      indices += self.index
     return self.get(indices)
 
 
