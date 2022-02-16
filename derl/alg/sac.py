@@ -132,6 +132,10 @@ class SACLoss(Loss):
     qvalues = act["taken_actions_qvalues"]
     qvalue_losses = []
     for i, qpreds in enumerate(qvalues):
+      if qtargets.shape != qpreds.shape:
+        raise ValueError("qpreds and qtargets have mismatched shapes, "
+                         f"act['taken_actions_qvalues'][{i}]={qpreds.shape} "
+                         f"qtargets.shape={qtargets.shape}")
       qvalue_losses.append(torch.mean(torch.pow(qtargets - qpreds, 2)))
 
     if summary.should_record():
@@ -156,6 +160,15 @@ class SACLoss(Loss):
     return SACLossTuple(policy_loss, entropy_scale_loss, qvalue_losses)
 
 
+def reset_model(model):
+  """ Reinitializes the layers of the model. """
+  if hasattr(model, "init_fn"):
+    model.apply(model.init_fn)
+    return
+  for child in model.children():
+    reset_model(child)
+
+
 class SAC(Alg):
   """ Soft Actor-Critic algorithm.
 
@@ -166,6 +179,7 @@ class SAC(Alg):
                name=None, **loss_kwargs):
     if target_policy is None:
       target_policy = deepcopy(runner.policy)
+      reset_model(target_policy.model)
     loss_fn = SACLoss(runner.policy, target_policy, name=name, **loss_kwargs)
     super().__init__(runner, trainer, loss_fn, name=name)
     self.target_updater = target_updater
