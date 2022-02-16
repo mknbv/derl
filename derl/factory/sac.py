@@ -5,7 +5,7 @@ from derl.factory.factory import Factory
 from derl.models import  SACModel
 from derl.policies import SACPolicy
 from derl.alg.sac import SAC, SACTrainer
-from derl.runners.experience_replay import make_sac_runner
+from derl.runners.experience_replay import make_mujoco_sac_runner
 
 
 class SACFactory(Factory):
@@ -46,7 +46,7 @@ class SACFactory(Factory):
                                         "storage_size", "storage_init_size",
                                         "batch_size", "steps_per_sample",
                                         "num_storage_samples")
-      runner = make_sac_runner(env, policy, **runner_kwargs)
+      runner = make_mujoco_sac_runner(env, policy, **runner_kwargs)
       return runner
 
   def make_trainer(self, runner, **kwargs):

@@ -44,6 +44,7 @@ class EnvRunner:
         interactions["rewards"].append(rew)
         interactions["resets"].append(done)
         interactions["infos"].append(info)
+        interactions["next_observations"].append(new_obs)
 
         # Note that batched envs should auto-reset, hence we only check
         # done flag if the env is not batched.

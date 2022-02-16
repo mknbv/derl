@@ -6,6 +6,7 @@ from derl.runners.env_runner import EnvRunner, RunnerWrapper
 from derl.runners.onpolicy import TransformInteractions
 from derl.runners.storage import InteractionStorage, PrioritizedStorage
 from derl.runners.summary import PeriodicSummaries
+from derl.runners.trajectory_transforms import NoResets
 from derl import summary
 
 
@@ -14,11 +15,13 @@ class ExperienceReplay(RunnerWrapper):
   def __init__(self, runner, storage,
                storage_init_size=50_000,
                batch_size=32,
+               store_next_observations=False,
                anneals=None):
     super().__init__(runner)
     self.storage = storage
     self.storage_init_size = storage_init_size
     self.batch_size = batch_size
+    self.store_next_observations = store_next_observations
     if anneals is None:
       anneals = []
     self.anneals = tuple(anneals)
@@ -36,7 +39,7 @@ class ExperienceReplay(RunnerWrapper):
     for _ in range(self.storage_init_size):
       action = self.env.action_space.sample()
       next_obs, rew, done, _ = self.env.step(action)
-      self.storage.add(obs, action, rew, done)
+      self.storage.add(obs, action, rew, done, next_obs)
       obs = next_obs if not done else self.env.reset()
     self.initialized_storage = True
     return obs
@@ -45,9 +48,10 @@ class ExperienceReplay(RunnerWrapper):
     if not self.initialized_storage:
       obs = self.initialize_storage(obs=obs)
     for interactions in self.runner.run(obs=obs):
-      interactions = [interactions[k] for k in ("observations", "actions",
-                                                "rewards", "resets")]
-      self.storage.add_batch(*interactions)
+      interactions = {k: interactions[k] for k in
+                      ("observations", "actions", "rewards", "resets",
+                       "next_observations")}
+      self.storage.add_batch(**interactions)
       for anneal in self.anneals:
         if summary.should_record():
           anneal.summarize(self.step_count)
@@ -113,18 +117,15 @@ class PrioritizedExperienceReplay(ExperienceReplay):
       yield interactions
 
 
-def dqn_runner_wrap(runner, prioritized=True,
-                    storage_size=1_000_000, storage_init_size=50_000,
-                    batch_size=32, nstep=3, **kwargs):
+def dqn_runner_wrap(runner, prioritized=True, storage_size=1_000_000,
+                    store_next_observations=False, nstep=3, **kwargs):
   """ Wraps runner as it is typically used with DQN alg. """
   if prioritized:
     storage = PrioritizedStorage(storage_size, nstep)
-    return PrioritizedExperienceReplay(
-        runner, storage, storage_init_size=storage_init_size,
-        batch_size=batch_size, **kwargs)
-  storage = InteractionStorage(storage_size, nstep)
-  return ExperienceReplay(runner, storage, storage_init_size=storage_init_size,
-                          batch_size=batch_size, **kwargs)
+    return PrioritizedExperienceReplay(runner, storage, **kwargs)
+  storage = InteractionStorage(storage_size, nstep, store_next_observations)
+  return ExperienceReplay(runner, storage, **kwargs)
+
 
 def make_dqn_runner(env, policy, num_train_steps, steps_per_sample=4,
                     nlogs=1e5, **wrap_kwargs):
@@ -158,13 +159,17 @@ class ResampleStorage(RunnerWrapper):
         yield self.runner.storage.sample(self.batch_size)
 
 
-def make_sac_runner(env, policy, num_train_steps,
-                    batch_size=256,
-                    steps_per_sample=1000,
-                    num_storage_samples=1000, **kwargs):
-  """ Creates env runner as typically done with SAC. """
+def make_mujoco_sac_runner(env, policy, num_train_steps,
+                           batch_size=256,
+                           steps_per_sample=1000,
+                           num_storage_samples=1000,
+                           **kwargs):
+  """ Creates SAC runner for mujoco env. """
   runner = make_dqn_runner(env, policy, num_train_steps,
                            batch_size=batch_size,
                            steps_per_sample=steps_per_sample,
-                           prioritized=False, nstep=1, **kwargs)
-  return ResampleStorage(runner, num_storage_samples - 1)
+                           prioritized=False, nstep=1,
+                           store_next_observations=True, **kwargs)
+  runner = ResampleStorage(runner, num_storage_samples - 1)
+  runner = TransformInteractions(runner, transforms=[NoResets()], asarray=False)
+  return runner
