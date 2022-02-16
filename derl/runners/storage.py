@@ -1,7 +1,15 @@
 """ Defines classes that store interactions. """
 from collections import deque
+from operator import itemgetter
 import numpy as np
 from derl.runners.sum_tree import SumTree
+
+
+def maybe_numpy(data):
+  """ Tries to cast data to np.ndarray. """
+  if isinstance(data, (list, tuple)) and not data:
+    return np.array(data)
+  return np.array(list(data)) if isinstance(data[0], np.ndarray) else data
 
 
 class InteractionArrays:
@@ -13,19 +21,23 @@ class InteractionArrays:
     self.rewards = np.empty(self.size, dtype=np.float32)
     self.resets = np.empty(self.size, dtype=bool)
 
-  def get(self, indices, nstep):
+  def get(self, indices, nstep, next_observations=True):
     """ Returns `nstep` interactions starting from indices `indices`. """
     # pylint: disable=misplaced-comparison-constant
     nstep_indices = (
         (indices[:, None] + np.arange(nstep)[None]) % self.size)
     next_indices = (indices + nstep) % self.size
-    return {
-        "observations": np.array(list(self.observations[indices])),
-        "actions": np.array(list(self.actions[indices])),
+    result = {
+        "observations": maybe_numpy(self.observations[indices]),
+        "actions": maybe_numpy(self.actions[indices]),
         "rewards": self.rewards[nstep_indices],
         "resets": self.resets[nstep_indices],
-        "next_observations": np.array(list(self.observations[next_indices])),
+        "next_observations": self.observations[next_indices],
     }
+    if next_observations:
+      next_indices = (indices + nstep) % self.size
+      result["next_observations"] = maybe_numpy(self.observations[next_indices])
+    return result
 
   def set(self, indices, observations, actions, rewards, resets):
     """ Sets values under specified indices. """
@@ -37,9 +49,13 @@ class InteractionArrays:
 
 class InteractionStorage:
   """ Simple circular buffer that stores interactions. """
-  def __init__(self, capacity, nstep=3):
+  def __init__(self, capacity, nstep=3, store_next_observations=False):
     self.capacity = capacity
     self.nstep = nstep
+    if store_next_observations and nstep != 1:
+      raise ValueError("when store_next_observations is True, "
+                       f"nstep must be 1, got nstep={nstep}")
+    self.store_next_observations = store_next_observations
     self.arrays = InteractionArrays(self.capacity)
     self.index = 0
     self.is_full = self.index >= self.capacity
@@ -54,26 +70,46 @@ class InteractionStorage:
     # pylint: disable=misplaced-comparison-constant
     if indices.size and not np.all((0 <= indices) & (indices < self.size)):
       raise ValueError(f"indices out of range(0, {self.size}): {indices}")
-    return self.arrays.get(indices, self.nstep)
+    result = self.arrays.get(indices, self.nstep,
+                             next_observations=not self.store_next_observations)
+    if self.store_next_observations:
+      result["observations"], result["next_observations"] = map(
+          maybe_numpy, (list(map(itemgetter(0), result["observations"])),
+                        list(map(itemgetter(1), result["observations"])))
+      )
+    return result
 
-  def add(self, observation, action, reward, done):
+  def check_next_observations(self, next_observations):
+    """ Checks if next_observations is specified when needed. """
+    if self.store_next_observations and next_observations is None:
+      raise ValueError("when store_next_observations was set to True "
+                       "next_observation cannot be None")
+
+  def add(self, observation, action, reward, done, next_observation=None):
     """ Adds new interaction to the storage. """
+    self.check_next_observations(next_observation)
     index = self.index
+    if self.store_next_observations:
+      observation = observation, next_observation
     self.arrays.set([index], [observation], [action], [reward], [done])
     self.is_full = self.is_full or index + 1 == self.capacity
     self.index = (index + 1) % self.capacity
     return index
 
-  def add_batch(self, observations, actions, rewards, resets):
+  def add_batch(self, observations, actions, rewards, resets,
+                next_observations=None):
     """ Adds a batch of interactions to the storage. """
-    batch_size = observations.shape[0]
-    if (batch_size != rewards.shape[0] or batch_size != actions.shape[0]
-        or batch_size != resets.shape[0]):
+    self.check_next_observations(next_observations)
+    batch_size = len(observations)
+    if (batch_size != len(rewards) or batch_size != len(actions)
+        or batch_size != len(resets)):
       raise ValueError(
           "observations, actions, rewards, and resets all must have the same "
           f"first dimension, got first dim sizes: {observations.shape[0]}, "
           f"{actions.shape[0]}, {rewards.shape[0]}, {resets.shape[0]}")
 
+    if self.store_next_observations:
+      observations = list(zip(observations, next_observations))
     indices = (self.index + np.arange(batch_size)) % self.capacity
     self.arrays.set(indices, observations, actions, rewards, resets)
     self.is_full = self.is_full or self.index + batch_size >= self.capacity
@@ -82,6 +118,11 @@ class InteractionStorage:
 
   def sample(self, size):
     """ Returns random sample of interactions of specified size. """
+    if self.store_next_observations:
+      indices = np.random.randint(self.index if not self.is_full
+                                  else self.capacity, size=size)
+      return self.get(indices)
+
     # Always sample by nstep less indices than available first,
     # then rearrange the indices such that 'next_observations' is
     # taken correctly.
@@ -106,14 +147,15 @@ class InteractionStorage:
 class PrioritizedStorage(InteractionStorage):
   """ Wraps given storage to make it prioritized. """
   def __init__(self, capacity, nstep=3, start_max_priority=1):
-    super().__init__(capacity, nstep)
+    super().__init__(capacity, nstep, store_next_observations=False)
     self.sum_tree = SumTree(capacity)
     self.start_max_priority = start_max_priority
     self.num_pending = self.nstep
     self.pending_indices = deque([])
 
-  def add(self, observation, action, reward, done):
+  def add(self, observation, action, reward, done, next_observation=None):
     """ Adds data to storage. """
+    _ = next_observation
     index = None
     if len(self.pending_indices) == self.num_pending:
       index = self.pending_indices.popleft()
@@ -127,8 +169,10 @@ class PrioritizedStorage(InteractionStorage):
     self.sum_tree.replace(indices, priorities)
     return index
 
-  def add_batch(self, observations, actions, rewards, resets):
+  def add_batch(self, observations, actions, rewards, resets,
+                next_observations=None):
     """ Adds batch of data to storage. """
+    _ = next_observations
     newindices = super().add_batch(observations, actions, rewards, resets)
     self.pending_indices.extend(newindices)
     n = len(self.pending_indices) - self.num_pending
