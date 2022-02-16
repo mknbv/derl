@@ -33,7 +33,8 @@ class SACPyBulletTest(AlgTestCase):
     self.alg.model.to("cpu")
 
   def test_interactions(self):
-    self.assert_interactions("testdata/sac/pybullet/interactions.npz")
+    self.assert_interactions("testdata/sac/pybullet/interactions.npz",
+                             rtol=1e-6, atol=1e-6)
 
   def save_grad(self, fname):
     interactions = next(self.alg.runner.run())
@@ -65,7 +66,7 @@ class SACPyBulletTest(AlgTestCase):
         self.alg.model.zero_grad()
 
   def test_grad(self):
-    self.assert_grad("testdata/sac/pybullet/grads.npz", rtol=1e-7, atol=0)
+    self.assert_grad("testdata/sac/pybullet/grads.npz", rtol=1e-5, atol=1e-5)
 
   def save_losses(self, filename, num_losses):
     data_iter = self.alg.runner.run()
@@ -88,4 +89,4 @@ class SACPyBulletTest(AlgTestCase):
                             expected[i], rtol=rtol, atol=atol)
 
   def test_losses(self):
-    self.assert_losses("testdata/sac/pybullet/losses.npy")
+    self.assert_losses("testdata/sac/pybullet/losses.npy", rtol=1e-5, atol=1e-5)
