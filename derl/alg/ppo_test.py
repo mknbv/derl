@@ -1,8 +1,8 @@
 # pylint: disable=missing-docstring
 import torch
+from derl.alg.test import AlgTestCase
 from derl.env.make_env import make as make_env
 from derl.factory.ppo import PPOFactory
-from derl.alg.test import AlgTestCase
 
 
 class PPOAtariTest(AlgTestCase):
