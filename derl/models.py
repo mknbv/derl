@@ -134,9 +134,8 @@ def init_weights(layer, weight_initializer, bias_initializer):
 
 def orthogonal_init(layer):
   """ Orthogonal initialization of layers and zero initialization of biases. """
-  return init_weights(layer,
-                      weight_initializer=nn.init.orthogonal_,
-                      bias_initializer=nn.init.zeros_)
+  init_weights(layer, weight_initializer=nn.init.orthogonal_,
+               bias_initializer=nn.init.zeros_)
 
 
 def broadcast_inputs(ndims):
@@ -191,8 +190,9 @@ class NatureCNNModel(nn.Module):
     self.output_layers = nn.ModuleList(
         [linear_class(in_units, out_units)
          for out_units in self.output_units])
-    if init_fn:
-      self.apply(init_fn)
+    self.init_fn = init_fn
+    if self.init_fn:
+      self.apply(self.init_fn)
     self.to("cuda" if torch.cuda.is_available() else "cpu")
 
   @broadcast_inputs(ndims=4)
@@ -247,8 +247,9 @@ class MuJoCoModel(nn.Module):
     self.module_list = nn.ModuleList()
     for nunits in output_units:
       self.module_list.append(mlp(observation_dim, nunits))
-    if init_fn is not None:
-      self.apply(init_fn)
+    self.init_fn = init_fn
+    if self.init_fn is not None:
+      self.apply(self.init_fn)
     if logstd_from_mlp is None:
       outputs = self.module_list[0](torch.empty(observation_dim))
       logstd_from_mlp = (isinstance(outputs, (list, tuple))
@@ -328,8 +329,9 @@ class ContinuousQValueModel(nn.Module):
     self.observation_dim = observation_dim
     self.action_dim = action_dim
     self.mlp = mlp(observation_dim + action_dim, 1)
-    if init_fn is not None:
-      self.apply(init_fn)
+    self.init_fn = init_fn
+    if self.init_fn is not None:
+      self.apply(self.init_fn)
     self.to("cuda" if torch.cuda.is_available() else "cpu")
 
   @broadcast_inputs(ndims=2)
