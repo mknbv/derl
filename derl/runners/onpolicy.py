@@ -16,7 +16,7 @@ class TransformInteractions(RunnerWrapper):
     self.asarray = asarray
 
   def run(self, obs=None):
-    for interactions in self.runner.run(obs=None):
+    for interactions in self.runner.run(obs=obs):
       if self.asarray:
         for key, val in filter(lambda kv: kv[0] != "state",
                                interactions.items()):
