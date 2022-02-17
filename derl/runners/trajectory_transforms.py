@@ -101,9 +101,3 @@ class Take:
   def __call__(self, trajectory):
     for key, val in filter(lambda kv: kv[0] != "state", trajectory.items()):
       trajectory[key] = np.take(val, self.indices, axis=self.axis)
-
-
-class NoResets:
-  """ Sets an array of zero values for resets. """
-  def __call__(self, trajectory):
-    trajectory["resets"] = np.zeros_like(trajectory["resets"])
