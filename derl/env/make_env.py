@@ -136,27 +136,23 @@ def nature_dqn_wrap(env, summarize=True, episodic_life=True, clip_reward=True):
   return env
 
 
-def mujoco_env(env_id, nenvs=None, seed=None, summarize=True,
-               normalize_obs=True, normalize_ret=True,
-               tanh_range_actions=False):
+def mujoco_env(env_id, nenvs=None, seed=None, time_limit=True, **kwargs):
   """ Creates and wraps MuJoCo env. """
   assert is_mujoco_id(env_id)
   seed = get_seed(nenvs, seed)
   if nenvs is not None:
     env = ParallelEnvBatch([
-        lambda s=s: mujoco_env(env_id, seed=s, summarize=False,
-                               normalize_obs=False, normalize_ret=False,
-                               tanh_range_actions=False)
+        lambda s=s: mujoco_env(env_id, seed=s, time_limit=time_limit,
+                               summarize=False, normalize_obs=False,
+                               normalize_ret=False, tanh_range_actions=False)
         for s in seed])
-    return mujoco_wrap(env, summarize=summarize, normalize_obs=normalize_obs,
-                       normalize_ret=normalize_ret)
+    return mujoco_wrap(env, **kwargs)
 
   env = gym.make(env_id)
   set_seed(env, seed)
-  return mujoco_wrap(env, summarize=summarize,
-                     normalize_obs=normalize_obs,
-                     normalize_ret=normalize_ret,
-                     tanh_range_actions=tanh_range_actions)
+  if not time_limit:
+    env = env.env
+  return mujoco_wrap(env, **kwargs)
 
 
 def mujoco_wrap(env, summarize=True, normalize_obs=True, normalize_ret=True,
