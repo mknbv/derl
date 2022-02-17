@@ -28,8 +28,8 @@ class RewardSummarizer:
         min_reward=min(q[-1] for q in self.reward_queues),
         max_reward=max(q[-1] for q in self.reward_queues),
     )
-    summaries[f"reward_mean_{self.reward_queues[0].maxlen}"] = (
-        np.mean([np.mean(q) for q in self.reward_queues]))
+    summaries[f"reward_mean_{self.reward_queues[0].maxlen}"] = \
+        np.mean([np.mean(q) for q in self.reward_queues])
 
     for key, val in summaries.items():
       summary.add_scalar(f"{self.prefix}/{key}", val,
@@ -45,6 +45,18 @@ class RewardSummarizer:
       self.had_ended_episodes[i] = True
 
     self.step_count += self.rewards.shape[0]
+    if self.should_add_summaries():
+      self.add_summaries()
+      self.episode_lengths.fill(0)
+      self.had_ended_episodes.fill(False)
+
+  def reset(self):
+    """ Resets the reward summarizer. """
+    for i, queue in enumerate(self.reward_queues):
+      if self.episode_lengths[i]:
+        queue.append(self.rewards[i])
+        self.rewards[i] = 0
+        self.had_ended_episodes[i] = True
     if self.should_add_summaries():
       self.add_summaries()
       self.episode_lengths.fill(0)
@@ -78,4 +90,5 @@ class Summarize(Wrapper):
     return obs, rew, done, info
 
   def reset(self, **kwargs):
+    self.summarizer.reset()
     return self.env.reset(**kwargs)
