@@ -6,7 +6,6 @@ from derl.runners.env_runner import EnvRunner, RunnerWrapper
 from derl.runners.onpolicy import TransformInteractions
 from derl.runners.storage import InteractionStorage, PrioritizedStorage
 from derl.runners.summary import PeriodicSummaries
-from derl.runners.trajectory_transforms import NoResets
 from derl import summary
 
 
@@ -159,17 +158,24 @@ class ResampleStorage(RunnerWrapper):
         yield self.runner.storage.sample(self.batch_size)
 
 
+def sac_runner_wrap(runner, storage_size=1_000_000,
+                    nstep=1, store_next_observations=True,
+                    batch_size=256, **kwargs):
+  """ Wraps runner for SAC algorithm. """
+  storage = InteractionStorage(storage_size, nstep=nstep,
+                               store_next_observations=store_next_observations)
+  return ExperienceReplay(runner, storage, batch_size=batch_size, **kwargs)
+
+
 def make_mujoco_sac_runner(env, policy, num_train_steps,
-                           batch_size=256,
                            steps_per_sample=1000,
                            num_storage_samples=1000,
-                           **kwargs):
+                           nlogs=1e5, **wrap_kwargs):
   """ Creates SAC runner for mujoco env. """
-  runner = make_dqn_runner(env, policy, num_train_steps,
-                           batch_size=batch_size,
-                           steps_per_sample=steps_per_sample,
-                           prioritized=False, nstep=1,
-                           store_next_observations=True, **kwargs)
+  runner = EnvRunner(env, policy, horizon=steps_per_sample,
+                     nsteps=num_train_steps, time_limit=steps_per_sample)
+  runner = PeriodicSummaries.make_with_nlogs(runner, nlogs)
+  runner = TransformInteractions(runner)
+  runner = sac_runner_wrap(runner, **wrap_kwargs)
   runner = ResampleStorage(runner, num_storage_samples - 1)
-  runner = TransformInteractions(runner, transforms=[NoResets()], asarray=False)
   return runner
